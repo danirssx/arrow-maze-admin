@@ -4,6 +4,7 @@ import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { AuthSession } from "@/application/auth/AuthSession";
 import type { LoginUseCase } from "@/application/auth/use-cases/LoginUseCase";
+import type { IHttpClient } from "@/application/ports/IHttpClient";
 import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { SessionContext, type SessionContextValue } from "@/framework/session/SessionContext";
 import { SectionPlaceholderScreen } from "@/presentation/screens/SectionPlaceholderScreen";
@@ -22,6 +23,7 @@ function renderLayout(signOut = vi.fn(async () => {})) {
     signIn: vi.fn(),
     signOut,
     loginUseCase: {} as unknown as LoginUseCase,
+    httpClient: {} as unknown as IHttpClient,
   };
   render(
     <SessionContext.Provider value={value}>

@@ -256,4 +256,93 @@ commit/push/PR, and Linear updates. Keep design concordance with the client (sha
   match `/levels`) by requiring an exact match or a `/`-delimited segment boundary.
 
 
+---
+
+# AI Usage Log: MAZ-204 (AD-03) Admin levels list with status + row actions
+
+## Task / Problem
+
+Turn the `/levels` placeholder into a real table from `GET /admin/levels`: name, difficulty,
+status, arrow count, created date; a status filter; and per-row actions — view (inline
+detail), publish (DRAFT→PUBLISHED) and archive (PUBLISHED→ARCHIVED) wired to
+`POST /levels/:id/publish` and `/archive`. Backend errors (e.g. publishing a non-solvable
+level) must be shown clearly. Fourth ticket of the admin repo (M11), stacked on AD-02
+(MAZ-203); consumes BE-02 (`GET /admin/levels`, MAZ-196) + MAZ-177 publish/archive.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-204` with the full branch process, following both repo `AGENTS.md`, the admin
+repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI
+usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates,
+keeping design concordance with the client.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-levels-list-MAZ-204.spec.md` with the backend contract (verified against the BE-02 branch + publish/archive) + the per-layer CA impact + the presentation-never-imports-domain flag decision. | `specs/admin-levels-list-MAZ-204.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s7`. | `specs/admin-levels-list-MAZ-204.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Built the vertical across 5 layers test-first; iterated to `npm run verify` green. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), row flags computed in application (presentation dumb), `HttpAdminLevelApi` behind the port, `@s`→test map, verify green, mutation 100%. | this log + spec CA contract |
+| Mutation Tester (`.agents/mutation.md`) | Used | Ran Stryker on domain+application: `LevelStatusPolicy`, list/publish/archive use cases, `LevelStatusFilter` → **100%**. | `npm run mutation` 100% |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` lists every status | `tests/presentation/level/LevelsView.test.tsx`, `tests/framework/level/AdminLevelsRoute.test.tsx`, `tests/infrastructure/level/HttpAdminLevelApi.test.ts` |
+| `@s2` filter queries backend | `HttpAdminLevelApi.test.ts` (`?status=`), `tests/application/level/LevelStatusFilter.test.ts` (`toStatusQuery`) |
+| `@s3` actions follow lifecycle | `tests/domain/level/LevelStatusPolicy.test.ts`, `tests/application/level/use-cases/ListAdminLevelsUseCase.test.ts` (flags), `LevelsView.test.tsx` (publish/archive visibility) |
+| `@s4` publish → refresh | `AdminLevelsRoute.test.tsx` (publish POST + status flips to PUBLISHED after refetch), `PublishLevelUseCase.test.ts` |
+| `@s5` archive → refresh | `ArchiveLevelUseCase.test.ts`, `HttpAdminLevelApi.test.ts` (archive endpoint) |
+| `@s6` backend error shown | `tests/infrastructure/http/HttpError.test.ts` (`fromResponse` lifts `error.message`), `LevelsView.test.tsx` (error state) |
+| `@s7` inline detail on view | `LevelsView.test.tsx` (expanded detail row) |
+
+## Result Obtained
+
+- **domain** — `level/LevelStatus`, `level/LevelDifficulty`, `level/LevelStatusPolicy`
+  (`canPublish`=DRAFT only, `canArchive`=PUBLISHED only).
+- **application** — `level/AdminLevelSummary`, `level/AdminLevelRow` (summary + flags),
+  `level/LevelStatusFilter` (`toStatusQuery` + options), `ports/IAdminLevelApi`, use cases
+  `ListAdminLevelsUseCase` (maps summaries → rows via policy), `PublishLevelUseCase`,
+  `ArchiveLevelUseCase`.
+- **infrastructure** — `level/AdminLevelDtos`, `level/HttpAdminLevelApi` (GET `/admin/levels`
+  + `?status`, POST publish/archive with `encodeURIComponent`); **enhanced**
+  `http/HttpError` (`fromResponse` lifts backend `{error:{code,message}}` → `serverCode` +
+  message) and `http/FetchHttpClient` (parses the error body on failure).
+- **presentation** — `level/formatCreatedAt` (pure), `level/LevelsView` (dumb: filter +
+  table + actions gated by row flags + loading/error/empty + inline detail).
+- **framework** — `level/adminLevelServices` (+ `useAdminLevelServices`), `level/useAdminLevels`
+  (React Query view-model: query + publish/archive mutations invalidating the list + filter/
+  expanded/pending state), `level/AdminLevelsRoute`; exposed `httpClient` on `SessionContext`;
+  wired the `/levels` route to `AdminLevelsRoute`.
+- `npm run verify` **GREEN** (lint + typecheck + coverage [81 tests / 25 files] + build);
+  `npm run mutation` **100%** on domain+application.
+
+## Team modifications pending human review
+
+- `HttpError`/`FetchHttpClient` now surface the backend error message. This touches AD-01
+  files (on this stacked branch); the AD-01 tests still pass unchanged. Flagged for review.
+- `httpClient` is now exposed on `SessionContext` so feature verticals can build data
+  services from the one authenticated (Bearer + 401-refresh) transport.
+
+## Lessons / Limitations
+
+- **Reconciling React Query with the repo's MVVM:** server state (list + publish/archive)
+  lives in a React Query hook (`useAdminLevels`, the functional view-model), the screen is a
+  thin framework route container, and the table is a dumb presentation view — same
+  framework-wires-dumb-view split as AD-02's `AdminLayout`/`AppShell`.
+- **Presentation never imports domain:** the row `canPublish`/`canArchive` flags and the
+  `LevelStatusFilter` type/options live in application (which may import domain), so the view
+  consumes DTO flags only — same boundary decision as AD-01's `{session, isAdmin}`.
+- The `GET /admin/levels` contract lives on the un-merged BE-02 branch
+  (`feat/backend-admin-levels-MAZ-196`); read it there via `git show` to match the wire DTO.
+- Backend admin routes need `#65`/BE-02 merged before this screen has a live endpoint; the
+  screen is fully tested against the contract via a fake `IHttpClient`.
+
+
 <!-- AI_LOG_ENTRIES_END -->

@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { AuthSession } from "@/application/auth/AuthSession";
 import type { LoginUseCase } from "@/application/auth/use-cases/LoginUseCase";
+import type { IHttpClient } from "@/application/ports/IHttpClient";
 import { SessionContext, type SessionContextValue } from "@/framework/session/SessionContext";
 import { RequireAdmin } from "@/framework/router/RequireAdmin";
 
@@ -12,6 +13,7 @@ function renderWithSession(session: AuthSession | null) {
     signIn: vi.fn(),
     signOut: vi.fn(),
     loginUseCase: {} as unknown as LoginUseCase,
+    httpClient: {} as unknown as IHttpClient,
   };
   return render(
     <SessionContext.Provider value={value}>
