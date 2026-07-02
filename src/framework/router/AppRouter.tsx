@@ -2,9 +2,9 @@ import { useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider, useNavigate } from "react-router-dom";
 import { LoginScreen } from "@/presentation/auth/LoginScreen";
 import { LoginViewModel } from "@/presentation/auth/LoginViewModel";
-import { DashboardScreen } from "@/presentation/screens/DashboardScreen";
-import { loadEnv } from "@/framework/config/env";
+import { SectionPlaceholderScreen } from "@/presentation/screens/SectionPlaceholderScreen";
 import { useSession } from "@/framework/session/SessionContext";
+import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { RequireAdmin } from "./RequireAdmin";
 
 /** Public login route. Builds the login ViewModel from the composed use case. */
@@ -22,19 +22,6 @@ function LoginRoute() {
   return <LoginScreen viewModel={viewModel} />;
 }
 
-/** Protected dashboard route (wired to the session for username + sign-out). */
-function DashboardRoute() {
-  const { session, signOut } = useSession();
-  const env = loadEnv();
-  return (
-    <DashboardScreen
-      apiBaseUrl={env.apiBaseUrl}
-      username={session?.username ?? ""}
-      onLogout={() => void signOut()}
-    />
-  );
-}
-
 /** Application router (composition root for routes). */
 export function AppRouter() {
   const router = createBrowserRouter([
@@ -43,9 +30,15 @@ export function AppRouter() {
       path: "/",
       element: (
         <RequireAdmin>
-          <DashboardRoute />
+          <AdminLayout />
         </RequireAdmin>
       ),
+      children: [
+        { index: true, element: <Navigate to="/levels" replace /> },
+        { path: "levels", element: <SectionPlaceholderScreen title="Levels" /> },
+        { path: "leaderboard", element: <SectionPlaceholderScreen title="Leaderboard" /> },
+        { path: "users", element: <SectionPlaceholderScreen title="Users" /> },
+      ],
     },
   ]);
   return <RouterProvider router={router} />;

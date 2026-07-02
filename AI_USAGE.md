@@ -179,4 +179,81 @@ concordance and use the **Outfit** font.
   construction cycle instead.
 
 
+---
+
+# AI Usage Log: MAZ-203 (AD-02) Authenticated layout + protected navigation
+
+## Task / Problem
+
+Add the authenticated application shell to `arrow-maze-admin`: a persistent layout with
+navigation between the three sections (Levels, Leaderboard, Users), the admin identity +
+a header logout, an active-section highlight, and nested protected routing. Third ticket
+of the admin repo (M11), stacked on AD-01 (MAZ-202).
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-203` with the full branch process, following both repo `AGENTS.md` files,
+the admin repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`,
+`Linear_MCP_Guideline.md`, AI usage logging + `compile-ai-usage.sh`, `npm run verify`,
+commit/push/PR, and Linear updates. Keep design concordance with the client (shared palette
++ Outfit).
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-layout-MAZ-203.spec.md` with the Clean Architecture contract (per-layer impact + forbidden moves) and the mutation-N/A rationale. | `specs/admin-layout-MAZ-203.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s6`. | `specs/admin-layout-MAZ-203.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Test-first shell: pure `resolveActiveSection` + `AppShellViewModel` + dumb `AppShell` + framework `AdminLayout`; iterated to `npm run verify` green. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), AppShell holds no auth/business logic (identity + actions are props), active-section is pure, `@s`→test map, verify green. | this log + spec CA contract |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | No domain/application change → gate **N/A**; ran Stryker to confirm the untouched domain/application stays **100%**. | `npm run mutation` 100% |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` brand + identity + 3 sections | `tests/presentation/layout/AppShell.test.tsx`, `tests/framework/layout/AdminLayout.test.tsx` |
+| `@s2` selecting a section navigates | `AppShell.test.tsx` (onNavigate `/users`), `AdminLayout.test.tsx` (nav → Leaderboard Outlet) |
+| `@s3` active section by longest-path match | `tests/presentation/navigation/resolveActiveSection.test.ts` (exact, nested, prefix-not-segment, longest wins) |
+| `@s4` header logout ends the session | `AppShell.test.tsx` (onLogout), `AdminLayout.test.tsx` (`signOut` called) |
+| `@s5` unauthenticated → /login | covered by `RequireAdmin` (AD-01) wrapping `AdminLayout` in `AppRouter`; `tests/framework/router/RequireAdmin.test.tsx` |
+| `@s6` responsive nav toggle | `tests/presentation/layout/AppShellViewModel.test.ts`, `AppShell.test.tsx` (toggle + close-on-select) |
+
+## Result Obtained
+
+- **presentation** — `navigation/adminSections.ts` (`ADMIN_SECTIONS` data),
+  `navigation/resolveActiveSection.ts` (pure longest-path match), `layout/AppShellUiState`
+  + `layout/AppShellViewModel` (MVVM; owns only the responsive nav open/closed state),
+  `layout/AppShell.tsx` (dumb view: brand, nav, identity + logout, `children`),
+  `screens/SectionPlaceholderScreen.tsx`. **Removed** `screens/DashboardScreen.tsx` (dead
+  after the shell refactor).
+- **framework** — `layout/AdminLayout.tsx` binds session (username + `signOut`) and router
+  (`useLocation` → active section, `useNavigate`, `<Outlet/>`) into the AppShell; nested
+  protected routes in `router/AppRouter.tsx` (`/` → `RequireAdmin` → `AdminLayout`, children
+  `index → /levels`, `/levels`, `/leaderboard`, `/users`). Removed `DashboardRoute`.
+- **Design concordance:** shell uses the shared palette tokens + Outfit (from AD-01).
+- `npm run verify` **GREEN** (lint + typecheck + coverage [55 tests / 15 files] + build);
+  `npm run mutation` **100%** (domain/application untouched — gate N/A this ticket).
+
+## Team modifications pending human review
+
+- None beyond the diff. Placeholder section screens (`SectionPlaceholderScreen`) are
+  intentional stand-ins that AD-03 / AD-08 / AD-09 replace at their route element.
+
+## Lessons / Limitations
+
+- A layout ticket legitimately has **no domain/application code**; the mutation gate is
+  N/A (precedent MAZ-198). MVVM is still honoured: the responsive nav drawer is real,
+  testable view state on `AppShellViewModel`, while route-derived active state is a pure
+  function passed as a prop — the view stays dumb.
+- Fresh worktrees need their own `npm install` (node_modules is not shared across git
+  worktrees).
+- Active-section match guards against string-prefix false positives (`/levelsx` must not
+  match `/levels`) by requiring an exact match or a `/`-delimited segment boundary.
+
+
 <!-- AI_LOG_ENTRIES_END -->
