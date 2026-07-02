@@ -81,7 +81,7 @@ export class FetchHttpClient implements IHttpClient {
     }
 
     if (!response.ok) {
-      throw HttpError.fromStatus(response.status, `Request failed with status ${response.status}`);
+      throw HttpError.fromResponse(response.status, await this.parseBodySafe(response));
     }
     return { data: (await this.parseBody(response)) as T, status: response.status };
   }
@@ -99,5 +99,14 @@ export class FetchHttpClient implements IHttpClient {
   private async parseBody(response: Response): Promise<unknown> {
     const text = await response.text();
     return text === "" ? null : JSON.parse(text);
+  }
+
+  /** Like `parseBody` but never throws — error bodies may be empty or non-JSON. */
+  private async parseBodySafe(response: Response): Promise<unknown> {
+    try {
+      return await this.parseBody(response);
+    } catch {
+      return null;
+    }
   }
 }

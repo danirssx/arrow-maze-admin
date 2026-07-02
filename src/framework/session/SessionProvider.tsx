@@ -49,7 +49,13 @@ export function SessionProvider({ children, storage, container }: SessionProvide
   }, [activeContainer]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, signIn, signOut, loginUseCase: activeContainer.loginUseCase }),
+    () => ({
+      session,
+      signIn,
+      signOut,
+      loginUseCase: activeContainer.loginUseCase,
+      httpClient: activeContainer.httpClient,
+    }),
     [session, signIn, signOut, activeContainer],
   );
 
