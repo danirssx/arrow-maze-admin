@@ -102,6 +102,16 @@ read-only, with no game engine — reusable by the JSON creator (AD-05) and leve
 Geometry is pure and in domain (equivalent to the client's `arrowSvgGeometry`); invalid JSON
 must degrade without crashing. Admin repo ticket (M11); depends only on AD-00 (scaffold), so
 it branches off AD-00 independently of the auth chain.
+# AI Usage Log: MAZ-202 (AD-01) Admin authentication (login + admin gate + session)
+
+## Task / Problem
+
+Add the auth vertical to `arrow-maze-admin`: an admin-only login that talks to the
+existing backend `/auth/*` endpoints, gates the dashboard behind an `ADMIN` role, persists
+the session, refreshes the access token on a 401 (retry once), and logs out. Design must
+follow the client's design system (shared palette) and use the **Outfit** font for visual
+concordance between client and admin. Second ticket of the admin repo (M11), stacked on
+AD-00 (MAZ-201).
 
 ## Tool and Model
 
@@ -112,6 +122,175 @@ Claude Code / Claude Opus 4.8 (1M context).
 Implement `MAZ-205` with the full branch process, following both repo `AGENTS.md`, the admin
 repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI
 usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+Implement `MAZ-202` doing the full branch process and mirroring the config from
+`arrow-maze-client` / `arrow-maze-backend`, following both `AGENTS.md` files, root
+`MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging, `npm run verify`, commit/push/PR,
+and Linear updates. Additionally: reuse the client `design/README.md` palette for
+concordance and use the **Outfit** font.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-auth-MAZ-202.spec.md` with the Clean Architecture contract + the boundary decision `LoginUseCase` returns `{session, isAdmin}` so presentation never imports domain. | `specs/admin-auth-MAZ-202.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s5` (admin login, non-admin gate, refresh-retry, logout, protected routes). | `specs/admin-auth-MAZ-202.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Test-first auth vertical across all 5 layers; iterated until `npm run verify` green. | `tests/**/*.test.{ts,tsx}` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Applied the checklist: boundary lint effective (presentation ⇏ domain), dependency rule inward-only, CA contract honoured, `@s`→test map, verify green. | this log + spec CA contract |
+| Mutation Tester (`.agents/mutation.md`) | Used | Ran Stryker on domain+application; killed 3 try/catch-swallowed null-guard survivors by reading the refresh token outside the try → **100%**. | `LogoutUseCase.ts`, `RefreshSessionUseCase.ts` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` valid admin signs in | `tests/presentation/auth/LoginViewModel.test.ts`, `tests/presentation/auth/LoginScreen.test.tsx`, `tests/application/auth/use-cases/LoginUseCase.test.ts` |
+| `@s2` non-admin rejected (not persisted) | `LoginViewModel.test.ts` (non-admin → error, no `onAuthenticated`), `LoginUseCase.test.ts` (`isAdmin=false`), `RequireAdmin.test.tsx` |
+| `@s3` expired token refreshed + retried once | `tests/infrastructure/http/FetchHttpClient.test.ts` (401 → refresh → retry with new Bearer; anonymous 401 no-loop), `RefreshSessionUseCase.test.ts` |
+| `@s4` logout clears the session | `tests/application/auth/use-cases/LogoutUseCase.test.ts` (clears even when server revoke fails; no server call without a session) |
+| `@s5` protected routes require admin session | `tests/framework/router/RequireAdmin.test.tsx` (admin renders; null/non-admin redirect to `/login`) |
+
+## Result Obtained
+
+- **Auth vertical (Clean Architecture):**
+  - domain: `UserRole`, `AdminAccessPolicy.isAdminRole` (pure).
+  - application: `AuthSession`, ports `IHttpClient` / `IAuthApi` / `ISessionStorage`, use
+    cases `LoginUseCase` (→ `{session, isAdmin}`), `RefreshSessionUseCase`, `LogoutUseCase`.
+  - infrastructure: `FetchHttpClient` (native fetch, Bearer interceptor, 401
+    refresh-and-retry-once guard mirroring the client's Axios adapter), `HttpError`,
+    `HttpAuthApi` + envelope DTOs (backend wraps `{ status, data }`), `LocalSessionStorage`.
+  - presentation (MVVM): `LoginViewModel` + `LoginUiState` + dumb `LoginScreen`.
+  - framework: `SessionContext` / `SessionProvider` (bootstrap from storage, `signIn`
+    persists, `signOut` = `LogoutUseCase`, `onUnauthorized` clears storage+state), auth
+    `composition/authContainer` (breaks the client↔refresh cycle via a lazy holder),
+    `RequireAdmin` guard, and login/protected routes in `AppRouter`.
+- **Design system:** `tailwind.config.js` now carries the client palette tokens
+  (primary/background/text/border/reward) + `fontFamily.sans = Outfit`; `@fontsource/outfit`
+  weights imported in `main.tsx`; `index.css` base body uses `bg-background font-sans`.
+  `vite build` bundles the Outfit woff2 assets.
+- **Boundary decision:** presentation never imports domain — `LoginUseCase` computes the
+  admin decision (via `AdminAccessPolicy`) and returns `{session, isAdmin}`; only admin
+  sessions are persisted (framework `signIn`).
+
+## Verification
+
+- `npm run verify` → **GREEN** (lint + typecheck + `test:coverage` [39 tests] + build).
+- `npm run mutation` (Stryker, domain+application scope) → **100%** (≥ break 80).
+
+## Notes / Gotchas
+
+- **Tests live in `tests/` (mirror), never colocated in `src/`.** Stryker's `mutate` glob
+  is `src/domain|application/**` with no `*.test.ts` exclusion, so a colocated test file is
+  itself mutated and tanks the score (seen at 63%). Moving them to `tests/` (matching AD-00)
+  restored a true 100%.
+- **jsdom has no usable `localStorage`** here (opaque origin) — inject an in-memory
+  `Storage` into `LocalSessionStorage` in tests instead of touching `window.localStorage`.
+- **Killing try/catch-swallowed null-guard mutants:** read `session.refreshToken` *outside*
+  the `try` so a missing session surfaces (keeps the `if (session === null)` guard
+  observable) instead of being indistinguishable from a swallowed refresh failure.
+- **eslint `prefer-const`** misfires on a forward-declared `let x; ...; x = ...` used in a
+  closure — used a `const` holder object (`lazyRefresh.run`) to break the client↔refresh
+  construction cycle instead.
+
+
+---
+
+# AI Usage Log: MAZ-203 (AD-02) Authenticated layout + protected navigation
+
+## Task / Problem
+
+Add the authenticated application shell to `arrow-maze-admin`: a persistent layout with
+navigation between the three sections (Levels, Leaderboard, Users), the admin identity +
+a header logout, an active-section highlight, and nested protected routing. Third ticket
+of the admin repo (M11), stacked on AD-01 (MAZ-202).
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-203` with the full branch process, following both repo `AGENTS.md` files,
+the admin repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`,
+`Linear_MCP_Guideline.md`, AI usage logging + `compile-ai-usage.sh`, `npm run verify`,
+commit/push/PR, and Linear updates. Keep design concordance with the client (shared palette
++ Outfit).
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-layout-MAZ-203.spec.md` with the Clean Architecture contract (per-layer impact + forbidden moves) and the mutation-N/A rationale. | `specs/admin-layout-MAZ-203.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s6`. | `specs/admin-layout-MAZ-203.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Test-first shell: pure `resolveActiveSection` + `AppShellViewModel` + dumb `AppShell` + framework `AdminLayout`; iterated to `npm run verify` green. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), AppShell holds no auth/business logic (identity + actions are props), active-section is pure, `@s`→test map, verify green. | this log + spec CA contract |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | No domain/application change → gate **N/A**; ran Stryker to confirm the untouched domain/application stays **100%**. | `npm run mutation` 100% |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` brand + identity + 3 sections | `tests/presentation/layout/AppShell.test.tsx`, `tests/framework/layout/AdminLayout.test.tsx` |
+| `@s2` selecting a section navigates | `AppShell.test.tsx` (onNavigate `/users`), `AdminLayout.test.tsx` (nav → Leaderboard Outlet) |
+| `@s3` active section by longest-path match | `tests/presentation/navigation/resolveActiveSection.test.ts` (exact, nested, prefix-not-segment, longest wins) |
+| `@s4` header logout ends the session | `AppShell.test.tsx` (onLogout), `AdminLayout.test.tsx` (`signOut` called) |
+| `@s5` unauthenticated → /login | covered by `RequireAdmin` (AD-01) wrapping `AdminLayout` in `AppRouter`; `tests/framework/router/RequireAdmin.test.tsx` |
+| `@s6` responsive nav toggle | `tests/presentation/layout/AppShellViewModel.test.ts`, `AppShell.test.tsx` (toggle + close-on-select) |
+
+## Result Obtained
+
+- **presentation** — `navigation/adminSections.ts` (`ADMIN_SECTIONS` data),
+  `navigation/resolveActiveSection.ts` (pure longest-path match), `layout/AppShellUiState`
+  + `layout/AppShellViewModel` (MVVM; owns only the responsive nav open/closed state),
+  `layout/AppShell.tsx` (dumb view: brand, nav, identity + logout, `children`),
+  `screens/SectionPlaceholderScreen.tsx`. **Removed** `screens/DashboardScreen.tsx` (dead
+  after the shell refactor).
+- **framework** — `layout/AdminLayout.tsx` binds session (username + `signOut`) and router
+  (`useLocation` → active section, `useNavigate`, `<Outlet/>`) into the AppShell; nested
+  protected routes in `router/AppRouter.tsx` (`/` → `RequireAdmin` → `AdminLayout`, children
+  `index → /levels`, `/levels`, `/leaderboard`, `/users`). Removed `DashboardRoute`.
+- **Design concordance:** shell uses the shared palette tokens + Outfit (from AD-01).
+- `npm run verify` **GREEN** (lint + typecheck + coverage [55 tests / 15 files] + build);
+  `npm run mutation` **100%** (domain/application untouched — gate N/A this ticket).
+
+## Team modifications pending human review
+
+- None beyond the diff. Placeholder section screens (`SectionPlaceholderScreen`) are
+  intentional stand-ins that AD-03 / AD-08 / AD-09 replace at their route element.
+
+## Lessons / Limitations
+
+- A layout ticket legitimately has **no domain/application code**; the mutation gate is
+  N/A (precedent MAZ-198). MVVM is still honoured: the responsive nav drawer is real,
+  testable view state on `AppShellViewModel`, while route-derived active state is a pure
+  function passed as a prop — the view stays dumb.
+- Fresh worktrees need their own `npm install` (node_modules is not shared across git
+  worktrees).
+- Active-section match guards against string-prefix false positives (`/levelsx` must not
+  match `/levels`) by requiring an exact match or a `/`-delimited segment boundary.
+
+
+---
+
+# AI Usage Log: MAZ-204 (AD-03) Admin levels list with status + row actions
+
+## Task / Problem
+
+Turn the `/levels` placeholder into a real table from `GET /admin/levels`: name, difficulty,
+status, arrow count, created date; a status filter; and per-row actions — view (inline
+detail), publish (DRAFT→PUBLISHED) and archive (PUBLISHED→ARCHIVED) wired to
+`POST /levels/:id/publish` and `/archive`. Backend errors (e.g. publishing a non-solvable
+level) must be shown clearly. Fourth ticket of the admin repo (M11), stacked on AD-02
+(MAZ-203); consumes BE-02 (`GET /admin/levels`, MAZ-196) + MAZ-177 publish/archive.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-204` with the full branch process, following both repo `AGENTS.md`, the admin
+repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI
+usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates,
+keeping design concordance with the client.
 
 ## Agent Roles Used
 
@@ -122,6 +301,11 @@ usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear 
 | TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Pure parse + geometry + dumb SVG view, test-first with exact-coordinate assertions. | `tests/**` + `src/**` |
 | Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), geometry pure, preview never throws, `@s`→test map, verify green, mutation 97.5% (only equivalent survivors). | this log + spec |
 | Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: raised 63%→85%→92%→**97.5%**; remaining 5 are equivalent type-guard mutants. | `npm run mutation` |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-levels-list-MAZ-204.spec.md` with the backend contract (verified against the BE-02 branch + publish/archive) + the per-layer CA impact + the presentation-never-imports-domain flag decision. | `specs/admin-levels-list-MAZ-204.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s7`. | `specs/admin-levels-list-MAZ-204.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Built the vertical across 5 layers test-first; iterated to `npm run verify` green. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), row flags computed in application (presentation dumb), `HttpAdminLevelApi` behind the port, `@s`→test map, verify green, mutation 100%. | this log + spec CA contract |
+| Mutation Tester (`.agents/mutation.md`) | Used | Ran Stryker on domain+application: `LevelStatusPolicy`, list/publish/archive use cases, `LevelStatusFilter` → **100%**. | `npm run mutation` 100% |
 
 ## Scenario Coverage (@s -> test/evidence)
 
@@ -168,6 +352,55 @@ usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear 
   primitive yields `undefined`, rejected by `Number.isInteger`/`typeof`; `DIRECTIONS.includes`
   never matches a non-string). Removing them would drop real defensiveness, so they are kept.
 - Branched off AD-00 (not the auth chain) since AD-04 depends only on the scaffold.
+| `@s1` lists every status | `tests/presentation/level/LevelsView.test.tsx`, `tests/framework/level/AdminLevelsRoute.test.tsx`, `tests/infrastructure/level/HttpAdminLevelApi.test.ts` |
+| `@s2` filter queries backend | `HttpAdminLevelApi.test.ts` (`?status=`), `tests/application/level/LevelStatusFilter.test.ts` (`toStatusQuery`) |
+| `@s3` actions follow lifecycle | `tests/domain/level/LevelStatusPolicy.test.ts`, `tests/application/level/use-cases/ListAdminLevelsUseCase.test.ts` (flags), `LevelsView.test.tsx` (publish/archive visibility) |
+| `@s4` publish → refresh | `AdminLevelsRoute.test.tsx` (publish POST + status flips to PUBLISHED after refetch), `PublishLevelUseCase.test.ts` |
+| `@s5` archive → refresh | `ArchiveLevelUseCase.test.ts`, `HttpAdminLevelApi.test.ts` (archive endpoint) |
+| `@s6` backend error shown | `tests/infrastructure/http/HttpError.test.ts` (`fromResponse` lifts `error.message`), `LevelsView.test.tsx` (error state) |
+| `@s7` inline detail on view | `LevelsView.test.tsx` (expanded detail row) |
+
+## Result Obtained
+
+- **domain** — `level/LevelStatus`, `level/LevelDifficulty`, `level/LevelStatusPolicy`
+  (`canPublish`=DRAFT only, `canArchive`=PUBLISHED only).
+- **application** — `level/AdminLevelSummary`, `level/AdminLevelRow` (summary + flags),
+  `level/LevelStatusFilter` (`toStatusQuery` + options), `ports/IAdminLevelApi`, use cases
+  `ListAdminLevelsUseCase` (maps summaries → rows via policy), `PublishLevelUseCase`,
+  `ArchiveLevelUseCase`.
+- **infrastructure** — `level/AdminLevelDtos`, `level/HttpAdminLevelApi` (GET `/admin/levels`
+  + `?status`, POST publish/archive with `encodeURIComponent`); **enhanced**
+  `http/HttpError` (`fromResponse` lifts backend `{error:{code,message}}` → `serverCode` +
+  message) and `http/FetchHttpClient` (parses the error body on failure).
+- **presentation** — `level/formatCreatedAt` (pure), `level/LevelsView` (dumb: filter +
+  table + actions gated by row flags + loading/error/empty + inline detail).
+- **framework** — `level/adminLevelServices` (+ `useAdminLevelServices`), `level/useAdminLevels`
+  (React Query view-model: query + publish/archive mutations invalidating the list + filter/
+  expanded/pending state), `level/AdminLevelsRoute`; exposed `httpClient` on `SessionContext`;
+  wired the `/levels` route to `AdminLevelsRoute`.
+- `npm run verify` **GREEN** (lint + typecheck + coverage [81 tests / 25 files] + build);
+  `npm run mutation` **100%** on domain+application.
+
+## Team modifications pending human review
+
+- `HttpError`/`FetchHttpClient` now surface the backend error message. This touches AD-01
+  files (on this stacked branch); the AD-01 tests still pass unchanged. Flagged for review.
+- `httpClient` is now exposed on `SessionContext` so feature verticals can build data
+  services from the one authenticated (Bearer + 401-refresh) transport.
+
+## Lessons / Limitations
+
+- **Reconciling React Query with the repo's MVVM:** server state (list + publish/archive)
+  lives in a React Query hook (`useAdminLevels`, the functional view-model), the screen is a
+  thin framework route container, and the table is a dumb presentation view — same
+  framework-wires-dumb-view split as AD-02's `AdminLayout`/`AppShell`.
+- **Presentation never imports domain:** the row `canPublish`/`canArchive` flags and the
+  `LevelStatusFilter` type/options live in application (which may import domain), so the view
+  consumes DTO flags only — same boundary decision as AD-01's `{session, isAdmin}`.
+- The `GET /admin/levels` contract lives on the un-merged BE-02 branch
+  (`feat/backend-admin-levels-MAZ-196`); read it there via `git show` to match the wire DTO.
+- Backend admin routes need `#65`/BE-02 merged before this screen has a live endpoint; the
+  screen is fully tested against the contract via a fake `IHttpClient`.
 
 
 <!-- AI_LOG_ENTRIES_END -->
