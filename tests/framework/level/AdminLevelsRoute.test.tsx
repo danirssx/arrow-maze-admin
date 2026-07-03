@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { AuthSession } from "@/application/auth/AuthSession";
 import type { LoginUseCase } from "@/application/auth/use-cases/LoginUseCase";
@@ -61,7 +62,9 @@ function renderRoute(http: IHttpClient) {
   render(
     <QueryClientProvider client={queryClient}>
       <SessionContext.Provider value={value}>
-        <AdminLevelsRoute />
+        <MemoryRouter initialEntries={["/levels"]}>
+          <AdminLevelsRoute />
+        </MemoryRouter>
       </SessionContext.Provider>
     </QueryClientProvider>,
   );

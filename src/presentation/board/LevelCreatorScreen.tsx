@@ -4,15 +4,27 @@ import { BoardPreview } from "@/presentation/board/BoardPreview";
 import type { LevelCreatorViewModel } from "./LevelCreatorViewModel";
 import { LEVEL_JSON_SCHEMA_EXAMPLE } from "./levelJsonSchemaExample";
 
+interface LevelCreatorScreenProps {
+  viewModel: LevelCreatorViewModel;
+  /** Backend error from the create/publish flow (AD-06), shown near submit. */
+  serverError?: string | null;
+  /** True while the create→publish request is in flight (AD-06). */
+  isSubmitting?: boolean;
+}
+
 /**
  * MVVM view — level creator. Dumb: paste/upload JSON, shows the expected schema, inline
  * shape errors, and a live board preview (AD-04). Submit is enabled only when the review is
- * valid; the actual server create/publish is wired in AD-06.
+ * valid and no request is in flight; server create/publish errors are shown as `serverError`.
  */
-export function LevelCreatorScreen({ viewModel }: { viewModel: LevelCreatorViewModel }) {
+export function LevelCreatorScreen({
+  viewModel,
+  serverError = null,
+  isSubmitting = false,
+}: LevelCreatorScreenProps) {
   const state = useViewModelState(viewModel);
   const { status, errors } = state.review;
-  const canSubmit = status === "valid";
+  const canSubmit = status === "valid" && !isSubmitting;
 
   const onTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     viewModel.setJsonText(event.target.value);
@@ -67,6 +79,15 @@ export function LevelCreatorScreen({ viewModel }: { viewModel: LevelCreatorViewM
             </ul>
           ) : null}
 
+          {serverError !== null ? (
+            <p
+              data-testid="server-error"
+              className="mt-3 rounded-lg bg-primary-900/10 px-3 py-2 text-xs font-semibold text-primary-900"
+            >
+              {serverError}
+            </p>
+          ) : null}
+
           <button
             type="button"
             data-testid="submit-level"
@@ -74,14 +95,14 @@ export function LevelCreatorScreen({ viewModel }: { viewModel: LevelCreatorViewM
             onClick={() => viewModel.submit()}
             className="mt-4 w-full rounded-2xl bg-primary-700 px-6 py-3 font-bold text-text-inverse disabled:opacity-50"
           >
-            Continue
+            {isSubmitting ? "Creating & publishing…" : "Create & publish"}
           </button>
         </div>
 
         <div>
           <span className="text-xs font-semibold text-text-secondary">Preview</span>
           <div className="mt-1">
-            {canSubmit ? (
+            {status === "valid" ? (
               <BoardPreview source={state.review.value} />
             ) : (
               <div

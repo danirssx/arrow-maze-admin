@@ -93,15 +93,6 @@ Linear updates.
 
 ---
 
-# AI Usage Log: MAZ-205 (AD-04) Read-only web board preview
-
-## Task / Problem
-
-A pure React SVG component that renders a level's `LevelDefinition` (arrows + board mask)
-read-only, with no game engine — reusable by the JSON creator (AD-05) and level detail.
-Geometry is pure and in domain (equivalent to the client's `arrowSvgGeometry`); invalid JSON
-must degrade without crashing. Admin repo ticket (M11); depends only on AD-00 (scaffold), so
-it branches off AD-00 independently of the auth chain.
 # AI Usage Log: MAZ-202 (AD-01) Admin authentication (login + admin gate + session)
 
 ## Task / Problem
@@ -119,9 +110,6 @@ Claude Code / Claude Opus 4.8 (1M context).
 
 ## Prompt Used
 
-Implement `MAZ-205` with the full branch process, following both repo `AGENTS.md`, the admin
-repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI
-usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
 Implement `MAZ-202` doing the full branch process and mirroring the config from
 `arrow-maze-client` / `arrow-maze-backend`, following both `AGENTS.md` files, root
 `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging, `npm run verify`, commit/push/PR,
@@ -296,11 +284,6 @@ keeping design concordance with the client.
 
 | Agent | Status | How it was used | Evidence |
 | --- | --- | --- | --- |
-| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/board-preview-MAZ-205.spec.md`: mirrored the backend data shape (verified against `prisma/seed-data/level-json/*.json`), per-layer CA impact, presentation-never-imports-domain decision. | `specs/board-preview-MAZ-205.spec.md` |
-| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s7`. | `specs/board-preview-MAZ-205.feature` |
-| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Pure parse + geometry + dumb SVG view, test-first with exact-coordinate assertions. | `tests/**` + `src/**` |
-| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), geometry pure, preview never throws, `@s`→test map, verify green, mutation 97.5% (only equivalent survivors). | this log + spec |
-| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: raised 63%→85%→92%→**97.5%**; remaining 5 are equivalent type-guard mutants. | `npm run mutation` |
 | Spec Partner (`.agents/spec-partner.md`) | Referenced | Wrote `specs/admin-levels-list-MAZ-204.spec.md` with the backend contract (verified against the BE-02 branch + publish/archive) + the per-layer CA impact + the presentation-never-imports-domain flag decision. | `specs/admin-levels-list-MAZ-204.spec.md` |
 | Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote executable Gherkin `@s1..@s7`. | `specs/admin-levels-list-MAZ-204.feature` |
 | TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Built the vertical across 5 layers test-first; iterated to `npm run verify` green. | `tests/**` + `src/**` |
@@ -311,47 +294,6 @@ keeping design concordance with the client.
 
 | Scenario | Evidence |
 | --- | --- |
-| `@s1` valid definition parsed | `tests/domain/board/parseBoardDefinition.test.ts` |
-| `@s2` invalid JSON → null, no throw | `parseBoardDefinition.test.ts` (non-object / bad arrows / bad shape), `tests/application/board/toBoardPreview.test.ts` |
-| `@s3` geometry places cells + arrow polylines | `tests/domain/board/boardGeometry.test.ts` (normalize, span, exact coords) |
-| `@s4` head points in direction | `boardGeometry.test.ts` (full head triangle per direction) |
-| `@s5` colours resolved safely | `tests/domain/board/resolveArrowColor.test.ts` (all 10 palette hexes + default) |
-| `@s6` preview renders SVG | `tests/presentation/board/BoardPreview.test.tsx` (rects + polylines + polygons) |
-| `@s7` preview degrades on invalid JSON | `BoardPreview.test.tsx` (fallback shown, no board) |
-
-## Result Obtained
-
-- **domain** — `board/BoardDefinition` (types), `board/parseBoardDefinition` (pure defensive
-  guard → `BoardDefinition | null`), `board/resolveArrowColor` (named→hex mirroring the
-  client palette, slate fallback), `board/boardGeometry` (`buildBoardGeometry` → normalized
-  mask rects + arrow polylines of cell centers + head triangles + viewBox; head sizing +
-  `directionUnit` mirror the client's `NeonArrow`).
-- **application** — `board/toBoardPreview(raw, cellSize)` → `BoardGeometry | null` (parse +
-  geometry), re-exports the geometry type so presentation needn't import domain.
-- **presentation** — `board/BoardPreview` (dumb SVG; renders geometry or a graceful fallback,
-  never throws). Reusable by AD-05.
-- `npm run verify` **GREEN** (lint + typecheck + coverage [43 tests / 6 files] + build);
-  `npm run mutation` **97.51%** on domain+application (≥ 80 gate).
-
-## Team modifications pending human review
-
-- None beyond the diff. The preview is intentionally self-contained (no shared engine), per
-  the ticket's "port ligero" note.
-
-## Lessons / Limitations
-
-- **Design concordance:** the arrow colour hexes and head geometry are ported from the mobile
-  client (`BoardView` COLOR_HEX + `NeonArrow` HEAD_LEN/HEAD_HALF + `arrowSvgGeometry`) so the
-  admin preview matches the game.
-- **Mutation — killing arithmetic/geometry mutants:** min/max bounds were refactored to
-  `Math.min`/`Math.max` (removes the `<`/`>` equal-value equivalent mutants and the
-  always-assign conditional), and geometry is asserted with exact coordinates at a fixed cell
-  size (34) plus a non-zero-origin, out-of-order fixture to pin the `row - minRow` subtraction.
-- **Remaining 5 survivors are equivalent mutants:** defensive `isRecord`/`typeof` guards in
-  `parseBoardDefinition` whose "failure" is redundantly caught downstream (destructuring a
-  primitive yields `undefined`, rejected by `Number.isInteger`/`typeof`; `DIRECTIONS.includes`
-  never matches a non-string). Removing them would drop real defensiveness, so they are kept.
-- Branched off AD-00 (not the auth chain) since AD-04 depends only on the scaffold.
 | `@s1` lists every status | `tests/presentation/level/LevelsView.test.tsx`, `tests/framework/level/AdminLevelsRoute.test.tsx`, `tests/infrastructure/level/HttpAdminLevelApi.test.ts` |
 | `@s2` filter queries backend | `HttpAdminLevelApi.test.ts` (`?status=`), `tests/application/level/LevelStatusFilter.test.ts` (`toStatusQuery`) |
 | `@s3` actions follow lifecycle | `tests/domain/level/LevelStatusPolicy.test.ts`, `tests/application/level/use-cases/ListAdminLevelsUseCase.test.ts` (flags), `LevelsView.test.tsx` (publish/archive visibility) |
@@ -401,6 +343,85 @@ keeping design concordance with the client.
   (`feat/backend-admin-levels-MAZ-196`); read it there via `git show` to match the wire DTO.
 - Backend admin routes need `#65`/BE-02 merged before this screen has a live endpoint; the
   screen is fully tested against the contract via a fake `IHttpClient`.
+
+
+---
+
+# AI Usage Log: MAZ-205 (AD-04) Read-only web board preview
+
+## Task / Problem
+
+A pure React SVG component that renders a level's `LevelDefinition` (arrows + board mask)
+read-only, with no game engine — reusable by the JSON creator (AD-05) and level detail.
+Geometry is pure and in domain (equivalent to the client's `arrowSvgGeometry`); invalid JSON
+must degrade without crashing. Admin repo ticket (M11); depends only on AD-00 (scaffold), so
+it branches off AD-00 independently of the auth chain.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-205` with the full branch process, following both repo `AGENTS.md`, the admin
+repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI
+usage logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/board-preview-MAZ-205.spec.md`: mirrored the backend data shape (verified against `prisma/seed-data/level-json/*.json`), per-layer CA impact, presentation-never-imports-domain decision. | `specs/board-preview-MAZ-205.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s7`. | `specs/board-preview-MAZ-205.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Pure parse + geometry + dumb SVG view, test-first with exact-coordinate assertions. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), geometry pure, preview never throws, `@s`→test map, verify green, mutation 97.5% (only equivalent survivors). | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: raised 63%→85%→92%→**97.5%**; remaining 5 are equivalent type-guard mutants. | `npm run mutation` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` valid definition parsed | `tests/domain/board/parseBoardDefinition.test.ts` |
+| `@s2` invalid JSON → null, no throw | `parseBoardDefinition.test.ts` (non-object / bad arrows / bad shape), `tests/application/board/toBoardPreview.test.ts` |
+| `@s3` geometry places cells + arrow polylines | `tests/domain/board/boardGeometry.test.ts` (normalize, span, exact coords) |
+| `@s4` head points in direction | `boardGeometry.test.ts` (full head triangle per direction) |
+| `@s5` colours resolved safely | `tests/domain/board/resolveArrowColor.test.ts` (all 10 palette hexes + default) |
+| `@s6` preview renders SVG | `tests/presentation/board/BoardPreview.test.tsx` (rects + polylines + polygons) |
+| `@s7` preview degrades on invalid JSON | `BoardPreview.test.tsx` (fallback shown, no board) |
+
+## Result Obtained
+
+- **domain** — `board/BoardDefinition` (types), `board/parseBoardDefinition` (pure defensive
+  guard → `BoardDefinition | null`), `board/resolveArrowColor` (named→hex mirroring the
+  client palette, slate fallback), `board/boardGeometry` (`buildBoardGeometry` → normalized
+  mask rects + arrow polylines of cell centers + head triangles + viewBox; head sizing +
+  `directionUnit` mirror the client's `NeonArrow`).
+- **application** — `board/toBoardPreview(raw, cellSize)` → `BoardGeometry | null` (parse +
+  geometry), re-exports the geometry type so presentation needn't import domain.
+- **presentation** — `board/BoardPreview` (dumb SVG; renders geometry or a graceful fallback,
+  never throws). Reusable by AD-05.
+- `npm run verify` **GREEN** (lint + typecheck + coverage [43 tests / 6 files] + build);
+  `npm run mutation` **97.51%** on domain+application (≥ 80 gate).
+
+## Team modifications pending human review
+
+- None beyond the diff. The preview is intentionally self-contained (no shared engine), per
+  the ticket's "port ligero" note.
+
+## Lessons / Limitations
+
+- **Design concordance:** the arrow colour hexes and head geometry are ported from the mobile
+  client (`BoardView` COLOR_HEX + `NeonArrow` HEAD_LEN/HEAD_HALF + `arrowSvgGeometry`) so the
+  admin preview matches the game.
+- **Mutation — killing arithmetic/geometry mutants:** min/max bounds were refactored to
+  `Math.min`/`Math.max` (removes the `<`/`>` equal-value equivalent mutants and the
+  always-assign conditional), and geometry is asserted with exact coordinates at a fixed cell
+  size (34) plus a non-zero-origin, out-of-order fixture to pin the `row - minRow` subtraction.
+- **Remaining 5 survivors are equivalent mutants:** defensive `isRecord`/`typeof` guards in
+  `parseBoardDefinition` whose "failure" is redundantly caught downstream (destructuring a
+  primitive yields `undefined`, rejected by `Number.isInteger`/`typeof`; `DIRECTIONS.includes`
+  never matches a non-string). Removing them would drop real defensiveness, so they are kept.
+- Branched off AD-00 (not the auth chain) since AD-04 depends only on the scaffold.
 
 
 ---
@@ -480,6 +501,85 @@ logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear update
   and the `JSON.parse` non-`Error` catch fallback is unreachable (it always throws `SyntaxError`).
   Killed the genuine ones: `>0`→`>=0` (via `timeLimit: 0`), `.every`→`.some` (mixed-cell path),
   and the independent `color` check (bad-colour-only arrow).
+
+
+---
+
+# AI Usage Log: MAZ-207 (AD-06) Create→validate(server)→publish: JSON mounted in the game
+
+## Task / Problem
+
+Wire the AD-05 creator to the backend authoring flow: `POST /levels` (create DRAFT) → show
+backend validation errors (ArrowSpec, containment) → `POST /levels/:id/publish` (validates DAG
+solvability) → success, so the level appears in the game (`GET /levels`). The backend is the
+source of truth for validation. Integration ticket of the admin repo (M11); depends on AD-05
+(creator) **and** AD-03 (levels list + admin services), so it converges both branch chains.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-207` with the full branch process, following both repo `AGENTS.md`, the admin
+repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage
+logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/create-publish-level-MAZ-207.spec.md`: verified the backend `POST /levels` + publish contract; per-layer CA impact; create→publish flow decision (DRAFT remains on publish failure). | `specs/create-publish-level-MAZ-207.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s5`. | `specs/create-publish-level-MAZ-207.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Use case + api.create + route wiring + screen server-error props, test-first. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), backend is authoritative (client only shape-validates), server errors surfaced, `@s`→test map, verify green, mutation 100% on the new use case. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: `CreateAndPublishLevelUseCase` **100%**; overall **97.30%** (rest are the equivalent typeof-guard survivors from AD-04/05). | `npm run mutation` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` create DRAFT then publish, in order | `tests/application/level/use-cases/CreateAndPublishLevelUseCase.test.ts`, `tests/framework/level/AdminLevelCreatorRoute.test.tsx` (POST order `/levels` → `/levels/new-1/publish`) |
+| `@s2` create rejection shown, publish skipped | `AdminLevelCreatorRoute.test.tsx` (server-error + only `/levels` posted), `CreateAndPublishLevelUseCase.test.ts` (create failure → no publish) |
+| `@s3` publish rejection shown (draft kept) | `CreateAndPublishLevelUseCase.test.ts` (publish failure propagates after create) |
+| `@s4` success → back to list (appears in game) | `AdminLevelCreatorRoute.test.tsx` (navigates to `/levels`; list query invalidated) |
+| `@s5` create posts the value to /levels | `tests/infrastructure/level/HttpAdminLevelApi.test.ts` (`create` → `POST /levels`, returns id) |
+
+## Result Obtained
+
+- **application** — `IAdminLevelApi.create(level) : Promise<string>` (new port method);
+  `CreateAndPublishLevelUseCase` (create → publish; returns the id; either backend failure
+  propagates with its message).
+- **infrastructure** — `HttpAdminLevelApi.create` (`POST /levels` with the value → `levelId`);
+  `CreateLevelData` DTO.
+- **framework** — `adminLevelServices` builds `createAndPublishUseCase`;
+  `AdminLevelCreatorRoute` (React Query mutation: create→publish, invalidate `admin-levels`,
+  navigate to `/levels` on success, surface backend error); `/levels/new` route; `AdminLevelsRoute`
+  passes `onCreate` → navigate to the creator.
+- **presentation** — `LevelCreatorScreen` extended with optional `serverError` + `isSubmitting`
+  (submit gated + "Creating & publishing…"; preview stays visible while submitting); `LevelsView`
+  gained an optional `New level` action.
+- **Branch convergence:** this branch merged AD-05 (creator+board, off AD-00) into AD-03
+  (layout+levels, off the auth chain); only `AI_USAGE.md` conflicted (regenerated from `ai-log/`).
+- `npm run verify` **GREEN** (lint + typecheck + coverage [161 tests / 36 files] + build);
+  `npm run mutation` **97.30%** on domain+application (`CreateAndPublishLevelUseCase` 100%).
+
+## Team modifications pending human review
+
+- Flow choice: on a publish failure the DRAFT stays (visible in the admin list, where it can be
+  published or archived). No client-side rollback, since the backend offers no delete in scope
+  and a persisted DRAFT is recoverable.
+
+## Lessons / Limitations
+
+- **Backend is the source of truth:** the client does shape validation (AD-05) for fast
+  feedback, but ArrowSpec/containment (create) and DAG solvability (publish) are validated
+  server-side; the route shows whichever step's backend message returns.
+- **Convergence point:** AD-06 needed both chains (AD-03 data + AD-05 creator). Merging the two
+  was clean (disjoint files); the only shared touch was the compiled `AI_USAGE.md`, regenerated
+  via `compile-ai-usage.sh`.
+- Extended tests that build `IAdminLevelApi` fakes to include the new `create` method, and wrapped
+  `AdminLevelsRoute.test` in a `MemoryRouter` (the route now uses `useNavigate`).
 
 
 <!-- AI_LOG_ENTRIES_END -->

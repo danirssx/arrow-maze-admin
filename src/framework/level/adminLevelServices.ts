@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { ArchiveLevelUseCase } from "@/application/level/use-cases/ArchiveLevelUseCase";
+import { CreateAndPublishLevelUseCase } from "@/application/level/use-cases/CreateAndPublishLevelUseCase";
 import { ListAdminLevelsUseCase } from "@/application/level/use-cases/ListAdminLevelsUseCase";
 import { PublishLevelUseCase } from "@/application/level/use-cases/PublishLevelUseCase";
 import type { IHttpClient } from "@/application/ports/IHttpClient";
@@ -8,6 +9,7 @@ import { useSession } from "@/framework/session/SessionContext";
 
 export interface AdminLevelServices {
   listUseCase: ListAdminLevelsUseCase;
+  createAndPublishUseCase: CreateAndPublishLevelUseCase;
   publishUseCase: PublishLevelUseCase;
   archiveUseCase: ArchiveLevelUseCase;
 }
@@ -17,6 +19,7 @@ export function createAdminLevelServices(httpClient: IHttpClient): AdminLevelSer
   const api = new HttpAdminLevelApi(httpClient);
   return {
     listUseCase: new ListAdminLevelsUseCase(api),
+    createAndPublishUseCase: new CreateAndPublishLevelUseCase(api),
     publishUseCase: new PublishLevelUseCase(api),
     archiveUseCase: new ArchiveLevelUseCase(api),
   };

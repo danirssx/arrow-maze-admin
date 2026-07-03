@@ -17,7 +17,7 @@ function summary(overrides: Partial<AdminLevelSummary>): AdminLevelSummary {
 }
 
 function makeApi(summaries: AdminLevelSummary[]): IAdminLevelApi {
-  return { list: vi.fn(async () => summaries), publish: vi.fn(), archive: vi.fn() };
+  return { list: vi.fn(async () => summaries), create: vi.fn(), publish: vi.fn(), archive: vi.fn() };
 }
 
 describe("ListAdminLevelsUseCase", () => {

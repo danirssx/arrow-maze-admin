@@ -69,6 +69,14 @@ describe("HttpAdminLevelApi", () => {
     expect(get).toHaveBeenCalledWith("/admin/levels", { params: { status: "PUBLISHED" } });
   });
 
+  it("creates a level by posting the value to /levels and returns the new id", async () => {
+    const { http, post } = makeHttp();
+    const level = { name: "L", difficulty: "EASY", arrows: [] };
+    const id = await new HttpAdminLevelApi(http).create(level);
+    expect(post).toHaveBeenCalledWith("/levels", level);
+    expect(id).toBe("x");
+  });
+
   it("posts to the publish endpoint with an encoded id", async () => {
     const { http, post } = makeHttp();
     await new HttpAdminLevelApi(http).publish("a b/c");
