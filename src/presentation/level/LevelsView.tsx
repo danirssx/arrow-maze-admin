@@ -17,6 +17,8 @@ interface LevelsViewProps {
   errorMessage: string | null;
   pendingLevelId: string | null;
   expandedLevelId: string | null;
+  /** Optional "New level" action (wired by the route to navigate to the creator). */
+  onCreate?: () => void;
 }
 
 /**
@@ -35,26 +37,39 @@ export function LevelsView({
   errorMessage,
   pendingLevelId,
   expandedLevelId,
+  onCreate,
 }: LevelsViewProps) {
   return (
     <section data-testid="levels-view">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-black text-text-primary">Levels</h1>
-        <label className="flex items-center gap-2 text-sm text-text-secondary">
-          Status
-          <select
-            data-testid="status-filter"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value as LevelStatusFilter)}
-            className="rounded-xl border border-border-soft bg-white px-3 py-2 text-text-primary"
-          >
-            {LEVEL_STATUS_FILTER_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-3">
+          {onCreate !== undefined ? (
+            <button
+              type="button"
+              data-testid="new-level"
+              onClick={onCreate}
+              className="rounded-xl bg-primary-700 px-4 py-2 text-sm font-bold text-text-inverse active:opacity-80"
+            >
+              New level
+            </button>
+          ) : null}
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            Status
+            <select
+              data-testid="status-filter"
+              value={statusFilter}
+              onChange={(e) => onStatusFilterChange(e.target.value as LevelStatusFilter)}
+              className="rounded-xl border border-border-soft bg-white px-3 py-2 text-text-primary"
+            >
+              {LEVEL_STATUS_FILTER_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {errorMessage !== null ? (

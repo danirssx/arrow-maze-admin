@@ -41,6 +41,43 @@ function renderView(props?: Partial<React.ComponentProps<typeof LevelsView>>) {
 }
 
 describe("LevelsView", () => {
+  it("renders a New level action only when onCreate is provided", async () => {
+    const onCreate = vi.fn();
+    const { rerender } = render(
+      <LevelsView
+        rows={[row({})]}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        onView={vi.fn()}
+        onPublish={vi.fn()}
+        onArchive={vi.fn()}
+        isLoading={false}
+        errorMessage={null}
+        pendingLevelId={null}
+        expandedLevelId={null}
+      />,
+    );
+    expect(screen.queryByTestId("new-level")).not.toBeInTheDocument();
+
+    rerender(
+      <LevelsView
+        rows={[row({})]}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        onView={vi.fn()}
+        onPublish={vi.fn()}
+        onArchive={vi.fn()}
+        isLoading={false}
+        errorMessage={null}
+        pendingLevelId={null}
+        expandedLevelId={null}
+        onCreate={onCreate}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("new-level"));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
   it("renders a row with its fields and formatted created date", () => {
     renderView({ rows: [row({ levelId: "l1", name: "Alpha", arrowCount: 7 })] });
     const row1 = screen.getByTestId("level-row-l1");

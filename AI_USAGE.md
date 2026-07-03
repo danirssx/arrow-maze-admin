@@ -503,4 +503,83 @@ logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear update
   and the independent `color` check (bad-colour-only arrow).
 
 
+---
+
+# AI Usage Log: MAZ-207 (AD-06) Create→validate(server)→publish: JSON mounted in the game
+
+## Task / Problem
+
+Wire the AD-05 creator to the backend authoring flow: `POST /levels` (create DRAFT) → show
+backend validation errors (ArrowSpec, containment) → `POST /levels/:id/publish` (validates DAG
+solvability) → success, so the level appears in the game (`GET /levels`). The backend is the
+source of truth for validation. Integration ticket of the admin repo (M11); depends on AD-05
+(creator) **and** AD-03 (levels list + admin services), so it converges both branch chains.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-207` with the full branch process, following both repo `AGENTS.md`, the admin
+repo `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage
+logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/create-publish-level-MAZ-207.spec.md`: verified the backend `POST /levels` + publish contract; per-layer CA impact; create→publish flow decision (DRAFT remains on publish failure). | `specs/create-publish-level-MAZ-207.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s5`. | `specs/create-publish-level-MAZ-207.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Use case + api.create + route wiring + screen server-error props, test-first. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), backend is authoritative (client only shape-validates), server errors surfaced, `@s`→test map, verify green, mutation 100% on the new use case. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: `CreateAndPublishLevelUseCase` **100%**; overall **97.30%** (rest are the equivalent typeof-guard survivors from AD-04/05). | `npm run mutation` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` create DRAFT then publish, in order | `tests/application/level/use-cases/CreateAndPublishLevelUseCase.test.ts`, `tests/framework/level/AdminLevelCreatorRoute.test.tsx` (POST order `/levels` → `/levels/new-1/publish`) |
+| `@s2` create rejection shown, publish skipped | `AdminLevelCreatorRoute.test.tsx` (server-error + only `/levels` posted), `CreateAndPublishLevelUseCase.test.ts` (create failure → no publish) |
+| `@s3` publish rejection shown (draft kept) | `CreateAndPublishLevelUseCase.test.ts` (publish failure propagates after create) |
+| `@s4` success → back to list (appears in game) | `AdminLevelCreatorRoute.test.tsx` (navigates to `/levels`; list query invalidated) |
+| `@s5` create posts the value to /levels | `tests/infrastructure/level/HttpAdminLevelApi.test.ts` (`create` → `POST /levels`, returns id) |
+
+## Result Obtained
+
+- **application** — `IAdminLevelApi.create(level) : Promise<string>` (new port method);
+  `CreateAndPublishLevelUseCase` (create → publish; returns the id; either backend failure
+  propagates with its message).
+- **infrastructure** — `HttpAdminLevelApi.create` (`POST /levels` with the value → `levelId`);
+  `CreateLevelData` DTO.
+- **framework** — `adminLevelServices` builds `createAndPublishUseCase`;
+  `AdminLevelCreatorRoute` (React Query mutation: create→publish, invalidate `admin-levels`,
+  navigate to `/levels` on success, surface backend error); `/levels/new` route; `AdminLevelsRoute`
+  passes `onCreate` → navigate to the creator.
+- **presentation** — `LevelCreatorScreen` extended with optional `serverError` + `isSubmitting`
+  (submit gated + "Creating & publishing…"; preview stays visible while submitting); `LevelsView`
+  gained an optional `New level` action.
+- **Branch convergence:** this branch merged AD-05 (creator+board, off AD-00) into AD-03
+  (layout+levels, off the auth chain); only `AI_USAGE.md` conflicted (regenerated from `ai-log/`).
+- `npm run verify` **GREEN** (lint + typecheck + coverage [161 tests / 36 files] + build);
+  `npm run mutation` **97.30%** on domain+application (`CreateAndPublishLevelUseCase` 100%).
+
+## Team modifications pending human review
+
+- Flow choice: on a publish failure the DRAFT stays (visible in the admin list, where it can be
+  published or archived). No client-side rollback, since the backend offers no delete in scope
+  and a persisted DRAFT is recoverable.
+
+## Lessons / Limitations
+
+- **Backend is the source of truth:** the client does shape validation (AD-05) for fast
+  feedback, but ArrowSpec/containment (create) and DAG solvability (publish) are validated
+  server-side; the route shows whichever step's backend message returns.
+- **Convergence point:** AD-06 needed both chains (AD-03 data + AD-05 creator). Merging the two
+  was clean (disjoint files); the only shared touch was the compiled `AI_USAGE.md`, regenerated
+  via `compile-ai-usage.sh`.
+- Extended tests that build `IAdminLevelApi` fakes to include the new `create` method, and wrapped
+  `AdminLevelsRoute.test` in a `MemoryRouter` (the route now uses `useNavigate`).
+
+
 <!-- AI_LOG_ENTRIES_END -->

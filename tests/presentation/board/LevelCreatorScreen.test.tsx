@@ -36,6 +36,19 @@ describe("LevelCreatorScreen", () => {
     expect(screen.queryByTestId("validation-errors")).not.toBeInTheDocument();
   });
 
+  it("shows a server error and blocks submit while a request is in flight", () => {
+    const viewModel = new LevelCreatorViewModel(vi.fn());
+    const { rerender } = render(<LevelCreatorScreen viewModel={viewModel} serverError={null} />);
+    typeJson(validJson);
+    expect(screen.getByTestId("submit-level")).toBeEnabled();
+
+    rerender(<LevelCreatorScreen viewModel={viewModel} serverError="Only draft levels can be published" isSubmitting />);
+    expect(screen.getByTestId("server-error")).toHaveTextContent("Only draft levels can be published");
+    expect(screen.getByTestId("submit-level")).toBeDisabled();
+    // the preview stays visible while submitting
+    expect(screen.getByTestId("board-preview")).toBeInTheDocument();
+  });
+
   it("shows inline errors and disables submit for invalid JSON", () => {
     renderScreen();
     typeJson(JSON.stringify({ arrows: [] }));

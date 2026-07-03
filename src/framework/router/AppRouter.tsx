@@ -6,6 +6,7 @@ import { SectionPlaceholderScreen } from "@/presentation/screens/SectionPlacehol
 import { useSession } from "@/framework/session/SessionContext";
 import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { AdminLevelsRoute } from "@/framework/level/AdminLevelsRoute";
+import { AdminLevelCreatorRoute } from "@/framework/level/AdminLevelCreatorRoute";
 import { RequireAdmin } from "./RequireAdmin";
 
 /** Public login route. Builds the login ViewModel from the composed use case. */
@@ -37,6 +38,7 @@ export function AppRouter() {
       children: [
         { index: true, element: <Navigate to="/levels" replace /> },
         { path: "levels", element: <AdminLevelsRoute /> },
+        { path: "levels/new", element: <AdminLevelCreatorRoute /> },
         { path: "leaderboard", element: <SectionPlaceholderScreen title="Leaderboard" /> },
         { path: "users", element: <SectionPlaceholderScreen title="Users" /> },
       ],

@@ -4,7 +4,7 @@ import { PublishLevelUseCase } from "@/application/level/use-cases/PublishLevelU
 
 describe("PublishLevelUseCase", () => {
   it("publishes the given level via the api", async () => {
-    const api: IAdminLevelApi = { list: vi.fn(), publish: vi.fn(async () => {}), archive: vi.fn() };
+    const api: IAdminLevelApi = { list: vi.fn(), create: vi.fn(), publish: vi.fn(async () => {}), archive: vi.fn() };
     await new PublishLevelUseCase(api).execute("level-42");
     expect(api.publish).toHaveBeenCalledWith("level-42");
   });

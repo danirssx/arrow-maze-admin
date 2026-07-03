@@ -18,3 +18,7 @@ export interface AdminLevelDto {
 export interface AdminLevelListData {
   levels: AdminLevelDto[];
 }
+
+export interface CreateLevelData {
+  levelId: string;
+}

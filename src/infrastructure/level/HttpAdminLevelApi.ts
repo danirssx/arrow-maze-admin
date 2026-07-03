@@ -4,7 +4,12 @@ import type { LevelStatus } from "@/domain/level/LevelStatus";
 import type { AdminLevelSummary } from "@/application/level/AdminLevelSummary";
 import type { IAdminLevelApi } from "@/application/ports/IAdminLevelApi";
 import type { IHttpClient } from "@/application/ports/IHttpClient";
-import type { AdminLevelDto, AdminLevelListData, ApiEnvelope } from "./AdminLevelDtos";
+import type {
+  AdminLevelDto,
+  AdminLevelListData,
+  ApiEnvelope,
+  CreateLevelData,
+} from "./AdminLevelDtos";
 
 /** Adapts the backend admin level endpoints to the `IAdminLevelApi` port. */
 export class HttpAdminLevelApi implements IAdminLevelApi {
@@ -14,6 +19,11 @@ export class HttpAdminLevelApi implements IAdminLevelApi {
     const config = status === undefined ? undefined : { params: { status } };
     const res = await this.http.get<ApiEnvelope<AdminLevelListData>>("/admin/levels", config);
     return res.data.data.levels.map(HttpAdminLevelApi.toSummary);
+  }
+
+  async create(level: unknown): Promise<string> {
+    const res = await this.http.post<ApiEnvelope<CreateLevelData>>("/levels", level);
+    return res.data.data.levelId;
   }
 
   async publish(levelId: string): Promise<void> {
