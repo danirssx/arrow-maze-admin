@@ -582,4 +582,78 @@ logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear update
   `AdminLevelsRoute.test` in a `MemoryRouter` (the route now uses `useNavigate`).
 
 
+---
+
+# AI Log - MAZ-208 Archive + recreate preserving scores (planning)
+
+Date: 2026-07-03
+Ticket: MAZ-208
+Repo: `arrow-maze-admin`
+
+## Task / Problem
+
+Prepare the executable contract for AD-07: admin workflow to archive a published level, make score
+preservation explicit, and create a replacement through the existing JSON creator. Linear still has
+MAZ-208 in `Backlog`, so implementation was intentionally not started.
+
+## Tool and Model
+
+- OpenAI Codex CLI / GPT-5 coding agent.
+- Local shell, Git, Linear GraphQL read-only scripts using local `LINEAR_API_KEY`.
+
+## Prompt Used
+
+User asked to work on MAZ-208 following the repository AGENTS rules, reading `MEMORY.md`,
+`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
+usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
+pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
+`Backlog`.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/archive-recreate-preserve-scores-MAZ-208.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Read to shape the Clean Architecture contract the future judge will enforce. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | Read to confirm mutation applies after judge approval and implementation; no mutation run for planning-only work. | N/A |
+
+## Result Obtained
+
+- Created `specs/archive-recreate-preserve-scores-MAZ-208.spec.md`.
+- Created `specs/archive-recreate-preserve-scores-MAZ-208.feature` with scenarios `@s1` through
+  `@s6`.
+- Confirmed dependencies:
+  - MAZ-200 / BE-06 is merged in backend `origin/develop` and Linear `In Review`.
+  - MAZ-204 / AD-03, MAZ-206 / AD-05, and MAZ-207 / AD-06 are available in admin `origin/develop`.
+- No `src` or `tests` files were changed because the executable contract is not yet human-approved.
+
+## Scenario to Test Map
+
+Pending implementation. The future TDD pass must map:
+
+- `@s1` -> presentation/UI test for preservation copy before archive.
+- `@s2` -> framework/view-model test for successful archive replacement path.
+- `@s3` -> presentation/UI test for ARCHIVED row visibility and no archive action.
+- `@s4` -> framework/UI test for PUBLISHED filter archive result copy.
+- `@s5` -> framework/UI test for backend error with no success/replacement state.
+- `@s6` -> route/navigation test for `/levels/new` reuse.
+
+## Team Modifications Pending Human Review
+
+- Human must approve `specs/archive-recreate-preserve-scores-MAZ-208.feature` before production TDD.
+- Human should move MAZ-208 from `Backlog` to the approved implementation state according to the
+  Linear guideline.
+- Confirm the open question: AD-07 communicates leaderboard preservation but does not implement the
+  full AD-08 leaderboard table.
+
+## Lessons / Limitations
+
+- `docs/design-patterns.md` and `docs/ai-log-template.md` are referenced by prompts but are not
+  present in the admin repo.
+- Because this is planning-only, `npm run verify` validates repository health and contract files,
+  but no mutation gate is applicable yet.
+
+
 <!-- AI_LOG_ENTRIES_END -->
