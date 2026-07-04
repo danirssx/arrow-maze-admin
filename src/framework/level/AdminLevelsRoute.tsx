@@ -6,5 +6,11 @@ import { useAdminLevels } from "./useAdminLevels";
 export function AdminLevelsRoute() {
   const viewModel = useAdminLevels();
   const navigate = useNavigate();
-  return <LevelsView {...viewModel} onCreate={() => navigate("/levels/new")} />;
+  return (
+    <LevelsView
+      {...viewModel}
+      onCreate={() => navigate("/levels/new")}
+      onCreateVisual={() => navigate("/levels/new/visual")}
+    />
+  );
 }
