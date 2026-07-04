@@ -602,30 +602,6 @@ Claude Code / Claude Opus 4.8 (1M context).
 Implement `MAZ-211` with the full branch process, following both repo `AGENTS.md`, the admin repo
 `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging
 + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
-# AI Log - MAZ-208 Archive + recreate preserving scores (planning)
-
-Date: 2026-07-03
-Ticket: MAZ-208
-Repo: `arrow-maze-admin`
-
-## Task / Problem
-
-Prepare the executable contract for AD-07: admin workflow to archive a published level, make score
-preservation explicit, and create a replacement through the existing JSON creator. Linear still has
-MAZ-208 in `Backlog`, so implementation was intentionally not started.
-
-## Tool and Model
-
-- OpenAI Codex CLI / GPT-5 coding agent.
-- Local shell, Git, Linear GraphQL read-only scripts using local `LINEAR_API_KEY`.
-
-## Prompt Used
-
-User asked to work on MAZ-208 following the repository AGENTS rules, reading `MEMORY.md`,
-`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
-usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
-pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
-`Backlog`.
 
 ## Agent Roles Used
 
@@ -685,6 +661,39 @@ pipeline required stopping before TDD because no approved `.feature` existed and
   create→publish and AD-04's preview unchanged — no second publish path, no shared engine.
 - Branched off AD-06 (`feat/create-publish-level-MAZ-207`) since AD-10 depends on AD-06, which is
   not yet on `develop`.
+
+
+---
+
+# AI Log - MAZ-208 Archive + recreate preserving scores (planning)
+
+Date: 2026-07-03
+Ticket: MAZ-208
+Repo: `arrow-maze-admin`
+
+## Task / Problem
+
+Prepare the executable contract for AD-07: admin workflow to archive a published level, make score
+preservation explicit, and create a replacement through the existing JSON creator. Linear still has
+MAZ-208 in `Backlog`, so implementation was intentionally not started.
+
+## Tool and Model
+
+- OpenAI Codex CLI / GPT-5 coding agent.
+- Local shell, Git, Linear GraphQL read-only scripts using local `LINEAR_API_KEY`.
+
+## Prompt Used
+
+User asked to work on MAZ-208 following the repository AGENTS rules, reading `MEMORY.md`,
+`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
+usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
+pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
+`Backlog`.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
 | Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
 | Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/archive-recreate-preserve-scores-MAZ-208.feature` |
 | TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |
@@ -887,6 +896,80 @@ Implementation is blocked, so this is the intended map for the future TDD pass:
   `docs/tdd.md`, `docs/reglas_clean_arch.md`, and prior admin contracts were used instead.
 - Local GitHub CLI remains unauthenticated/invalid; PR creation should use the GitHub connector
   after pushing the branch.
+
+
+---
+
+# AI Usage Log: MAZ-212 (AD-11, Phase 2) Build + hosting of the admin SPA
+
+## Task / Problem
+
+Ship the production build + static-hosting configuration for the admin SPA: a static-host config
+with an SPA fallback (client-side routes must serve `index.html`), a documented production
+`VITE_API_BASE_URL`, and the step to add the deployed admin origin to the backend CORS (BE-04).
+Ops/config ticket (M11, Phase 2); depends on AD-01 (env) + BE-04 (CORS). The actual deploy is a
+human action.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-212` with the full branch process, following both repo `AGENTS.md`, the admin repo
+`AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging
++ `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/build-hosting-MAZ-212.spec.md`: framed this as an ops/config ticket (no `src/` behaviour), the deploy-is-a-human-step boundary, and the config-integrity test decision. | `specs/build-hosting-MAZ-212.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s4`. | `specs/build-hosting-MAZ-212.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Added host configs + a config-integrity test asserting the SPA fallback / build/output dir / env doc. | `tests/deploy/hostingConfig.test.ts` + config files |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: no `src/` change, host configs encode the SPA rewrite, docs cover prod env + CORS (BE-04), `npm run verify` green, no secrets/URLs committed. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Not used | No domain/application change → mutation gate **N/A** (precedent MAZ-198/203). | N/A |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` build emits static assets | `npm run build` → `dist/` (verified: `dist/index.html` + `dist/_redirects`) |
+| `@s2` SPA fallback to index.html | `tests/deploy/hostingConfig.test.ts` (netlify.toml redirect, vercel.json rewrites, `public/_redirects`) |
+| `@s3` prod API base URL documented as build-time var | `tests/deploy/hostingConfig.test.ts` (`.env.example` has `VITE_API_BASE_URL`), `docs/deploy.md`, README |
+| `@s4` deployed origin added to backend CORS | `docs/deploy.md` §3 + README + `.env.example` (BE-04, comma-separated `CORS_ORIGIN`) |
+
+## Result Obtained
+
+- **Host config (committed):** `netlify.toml` (build command, `publish = "dist"`, Node 20, SPA
+  redirect, baseline security headers), `vercel.json` (build/output + SPA `rewrites` + headers),
+  `public/_redirects` (Netlify SPA fallback → copied into `dist/` at build).
+- **Env + docs:** extended `.env.example` (prod `VITE_API_BASE_URL` is a host build-env var,
+  inlined by Vite; add the admin origin to backend `CORS_ORIGIN`), new `docs/deploy.md` runbook
+  (build, Netlify/Vercel/S3+CloudFront, SPA routing, CORS/BE-04, post-deploy checks), README
+  "Deployment (AD-11)" section.
+- **Test:** `tests/deploy/hostingConfig.test.ts` guards the SPA fallback + build/output dir + env
+  doc against regressions.
+- `npm run verify` **GREEN** (lint + typecheck + coverage [206 tests / 45 files] + `vite build`);
+  `dist/` contains `index.html` + `_redirects`. **Mutation gate N/A** (no `src/` change).
+
+## Team modifications pending human review
+
+- **The deploy itself is a human step** (agents don't deploy): connect the repo to Netlify/Vercel
+  (or upload `dist/` to S3+CloudFront), set `VITE_API_BASE_URL` in the host build env, and add the
+  admin's origin to the backend `CORS_ORIGIN`. Everything needed to do so is committed/documented.
+- **CORS (BE-04) is a backend deploy-env change** (`CORS_ORIGIN` value), not a code change — the
+  backend already parses a comma-separated list (MAZ-198); documented in `docs/deploy.md`.
+
+## Lessons / Limitations
+
+- The prod API URL is **not committed** — Vite inlines `VITE_API_BASE_URL` at build time, so it
+  belongs in the host build environment (and `.gitignore` ignores `.env.*` anyway, keeping the
+  prod value out of the repo).
+- SPA routing (`createBrowserRouter`) requires a host rewrite so deep links / hard refreshes on
+  `/levels`, `/levels/new`, … serve `index.html` (200); all three host configs encode it.
+- Config/docs ticket: no domain/application logic, so the mutation gate is N/A; the
+  config-integrity test provides a green regression guard instead.
 
 
 <!-- AI_LOG_ENTRIES_END -->

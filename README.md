@@ -59,4 +59,19 @@ npm run mutation             # Stryker mutation (domain + application)
 
 | Var | Purpose | Default |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Arrow Maze backend base URL | `http://localhost:3000` |
+| `VITE_API_BASE_URL` | Arrow Maze backend base URL (inlined at build time by Vite) | `http://localhost:3000` |
+
+## Deployment (AD-11)
+
+The admin is a static Vite SPA — `npm run build` emits `dist/`, served by any static host.
+Host configuration is committed:
+
+- **Netlify** — `netlify.toml` + `public/_redirects` (SPA fallback).
+- **Vercel** — `vercel.json` (SPA `rewrites`).
+- **S3 + CloudFront** — upload `dist/`, map unknown paths → `index.html`.
+
+Set the production API URL as a **build** env var on the host
+(`VITE_API_BASE_URL=https://…`), and add the admin's deployed origin to the backend
+`CORS_ORIGIN` (BE-04, comma-separated). Full runbook: [`docs/deploy.md`](docs/deploy.md).
+
+> Performing the actual deploy + DNS is a human step (agents don't deploy).
