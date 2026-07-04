@@ -1,0 +1,28 @@
+# Netlify build + static hosting for the Arrow Maze admin SPA (AD-11, MAZ-212).
+#
+# Before building, set VITE_API_BASE_URL to the production backend URL in the Netlify
+# site's environment variables (Site settings → Environment) — Vite inlines it at build
+# time. The admin's deployed origin must also be added to the backend CORS_ORIGIN (BE-04,
+# comma-separated).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: client-side routes (e.g. /levels, /levels/new) must serve index.html so a
+# hard refresh or deep link does not 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Baseline security headers for an internal admin dashboard.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
