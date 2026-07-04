@@ -602,6 +602,30 @@ Claude Code / Claude Opus 4.8 (1M context).
 Implement `MAZ-211` with the full branch process, following both repo `AGENTS.md`, the admin repo
 `AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging
 + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+# AI Log - MAZ-208 Archive + recreate preserving scores (planning)
+
+Date: 2026-07-03
+Ticket: MAZ-208
+Repo: `arrow-maze-admin`
+
+## Task / Problem
+
+Prepare the executable contract for AD-07: admin workflow to archive a published level, make score
+preservation explicit, and create a replacement through the existing JSON creator. Linear still has
+MAZ-208 in `Backlog`, so implementation was intentionally not started.
+
+## Tool and Model
+
+- OpenAI Codex CLI / GPT-5 coding agent.
+- Local shell, Git, Linear GraphQL read-only scripts using local `LINEAR_API_KEY`.
+
+## Prompt Used
+
+User asked to work on MAZ-208 following the repository AGENTS rules, reading `MEMORY.md`,
+`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
+usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
+pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
+`Backlog`.
 
 ## Agent Roles Used
 
@@ -661,6 +685,208 @@ Implement `MAZ-211` with the full branch process, following both repo `AGENTS.md
   create→publish and AD-04's preview unchanged — no second publish path, no shared engine.
 - Branched off AD-06 (`feat/create-publish-level-MAZ-207`) since AD-10 depends on AD-06, which is
   not yet on `develop`.
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/archive-recreate-preserve-scores-MAZ-208.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Read to shape the Clean Architecture contract the future judge will enforce. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | Read to confirm mutation applies after judge approval and implementation; no mutation run for planning-only work. | N/A |
+
+## Result Obtained
+
+- Created `specs/archive-recreate-preserve-scores-MAZ-208.spec.md`.
+- Created `specs/archive-recreate-preserve-scores-MAZ-208.feature` with scenarios `@s1` through
+  `@s6`.
+- Confirmed dependencies:
+  - MAZ-200 / BE-06 is merged in backend `origin/develop` and Linear `In Review`.
+  - MAZ-204 / AD-03, MAZ-206 / AD-05, and MAZ-207 / AD-06 are available in admin `origin/develop`.
+- No `src` or `tests` files were changed because the executable contract is not yet human-approved.
+
+## Scenario to Test Map
+
+Pending implementation. The future TDD pass must map:
+
+- `@s1` -> presentation/UI test for preservation copy before archive.
+- `@s2` -> framework/view-model test for successful archive replacement path.
+- `@s3` -> presentation/UI test for ARCHIVED row visibility and no archive action.
+- `@s4` -> framework/UI test for PUBLISHED filter archive result copy.
+- `@s5` -> framework/UI test for backend error with no success/replacement state.
+- `@s6` -> route/navigation test for `/levels/new` reuse.
+
+## Team Modifications Pending Human Review
+
+- Human must approve `specs/archive-recreate-preserve-scores-MAZ-208.feature` before production TDD.
+- Human should move MAZ-208 from `Backlog` to the approved implementation state according to the
+  Linear guideline.
+- Confirm the open question: AD-07 communicates leaderboard preservation but does not implement the
+  full AD-08 leaderboard table.
+
+## Lessons / Limitations
+
+- `docs/design-patterns.md` and `docs/ai-log-template.md` are referenced by prompts but are not
+  present in the admin repo.
+- Because this is planning-only, `npm run verify` validates repository health and contract files,
+  but no mutation gate is applicable yet.
+
+
+---
+
+# AI Log - MAZ-209 Read-only leaderboard viewer (planning)
+
+Date: 2026-07-04
+Ticket: MAZ-209
+Repo: `arrow-maze-admin`
+
+## Task / Problem
+
+Prepare the executable contract for AD-08: a read-only admin leaderboard viewer that selects a
+level, reads `GET /leaderboard/:levelId`, shows top entries, handles empty/error states, and works
+for archived levels. Linear still has MAZ-209 in `Backlog`, so implementation was intentionally not
+started.
+
+## Tool and Model
+
+- OpenAI Codex CLI / GPT-5 coding agent.
+- Local shell, Git, Linear GraphQL read-only script using local `LINEAR_API_KEY`.
+
+## Prompt Used
+
+User asked to work on MAZ-209 following the repository AGENTS rules, reading `MEMORY.md`,
+`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
+usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
+pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
+`Backlog`.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/admin-leaderboard-viewer-MAZ-209.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/admin-leaderboard-viewer-MAZ-209.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Read to shape the Clean Architecture contract the future judge will enforce. | `specs/admin-leaderboard-viewer-MAZ-209.spec.md` |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | Read to confirm mutation applies after judge approval and implementation; no mutation run for planning-only work. | N/A |
+
+## Result Obtained
+
+- Created `specs/admin-leaderboard-viewer-MAZ-209.spec.md`.
+- Created `specs/admin-leaderboard-viewer-MAZ-209.feature` with scenarios `@s1` through `@s7`.
+- Confirmed backend contract:
+  - `GET /leaderboard/:levelId` returns `levelId`, optional `leaderboardId`/`updatedAt`, and
+    `entries[]` with rank, username snapshot, score, time, moves and submitted date.
+  - Known empty levels return `200 entries: []`.
+  - MAZ-200 guarantees archived known levels remain readable through the same endpoint.
+- No `src` or `tests` files were changed because the executable contract is not yet human-approved.
+
+## Scenario to Test Map
+
+Pending implementation. The future TDD pass must map:
+
+- `@s1` -> framework/UI test for selector options including ARCHIVED levels.
+- `@s2` -> presentation/UI + infrastructure mapping tests for populated leaderboard entries.
+- `@s3` -> presentation/UI + infrastructure mapping tests for `entries: []`.
+- `@s4` -> framework/view-model test proving ARCHIVED uses the same leaderboard read path.
+- `@s5` -> framework/UI test for backend error visibility and usable selector.
+- `@s6` -> presentation/UI test proving no edit/delete/submit actions render.
+- `@s7` -> framework/view-model test proving no request happens until a level is selected.
+
+## Team Modifications Pending Human Review
+
+- Human must approve `specs/admin-leaderboard-viewer-MAZ-209.feature` before production TDD.
+- Human should move MAZ-209 from `Backlog` to the approved implementation state according to the
+  Linear guideline.
+- Confirm the open question: AD-08 may reuse `GET /admin/levels` for the selector even though the
+  original ticket dependency list only names AD-02.
+
+## Lessons / Limitations
+
+- `docs/design-patterns.md` and `docs/ai-log-template.md` are referenced by prompts but are not
+  present in the admin repo.
+- Because this is planning-only, `npm run verify` validates repository health and contract files,
+  but no mutation gate is applicable yet.
+
+
+---
+
+# AI Usage Log: MAZ-210 (AD-09) read-only users viewer planning
+
+## Task / Problem
+
+Prepare the executable planning contract for `MAZ-210`, the admin web read-only Users viewer.
+Linear shows the ticket in `Backlog`, so implementation and TDD are intentionally blocked until a
+human approves `specs/admin-users-viewer-MAZ-210.feature` and moves the ticket to an implementation
+state.
+
+## Tool and Model
+
+- Tool: OpenAI Codex CLI in the local workspace.
+- Model: GPT-5.
+
+## Prompt Used
+
+User requested work on `MAZ-210`, including reviewing both backend/client `AGENTS.md`, root
+`MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage requirements, checks, a new worktree, commit, push,
+PR, Linear update, and a review of affected ticket context because this is part of a refactor.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Used the spec checklist to define purpose, scope, API contract, Clean Architecture contract, decisions, edge cases, and open questions. | `specs/admin-users-viewer-MAZ-210.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Produced the executable Gherkin contract with stable `@s1..@s7` tags and stopped before TDD because Linear is still `Backlog`. | `specs/admin-users-viewer-MAZ-210.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Applied the precondition rule: no production or test changes before human approval of the `.feature`. | No `src/` or `tests/` changes |
+| Judge (`.agents/judge.md`) | Referenced | Included the required Clean Architecture contract and layer impact so a future judge can review implementation against it. | `specs/admin-users-viewer-MAZ-210.spec.md` |
+| Mutation Tester (`.agents/mutation.md`) | Not used | No implementation was performed; mutation testing is not applicable to planning-only work. | N/A |
+
+## Affected Ticket Context Reviewed
+
+- `MAZ-197` / `BE-03`: backend `GET /admin/users`, currently `In Review`, provides the read-only
+  paginated API and guarantees no `passwordHash`.
+- `MAZ-203` / `AD-02`: admin layout and protected `/users` route placeholder, currently `In Review`.
+- `MAZ-209` / `AD-08`: merged into admin `origin/develop` before this worktree; confirms the same
+  planning-only gate pattern for read-only admin views.
+
+## Result Obtained
+
+- Added `specs/admin-users-viewer-MAZ-210.spec.md`.
+- Added `specs/admin-users-viewer-MAZ-210.feature` with scenarios `@s1..@s7`.
+- Did not edit `src/` or `tests/` because the executable contract is not human-approved yet.
+
+## Scenario to Future Test Map
+
+Implementation is blocked, so this is the intended map for the future TDD pass:
+
+| Scenario | Future concrete tests |
+| --- | --- |
+| `@s1` users table renders backend fields | Application/infrastructure mapping test + Users view render test |
+| `@s2` password hashes never exposed | Mapper test with unexpected `passwordHash` + UI negative assertion |
+| `@s3` changing page requests next page | Framework/view-model pagination test |
+| `@s4` empty users response shows empty state | Users view empty-state test |
+| `@s5` backend users errors visible and recoverable | Infrastructure error mapping + UI error/retry test |
+| `@s6` users table is read-only | UI negative assertions for edit/suspend/delete/role/password actions |
+| `@s7` pagination controls reflect metadata | Pagination controls state test |
+
+## Validation
+
+- `npm run verify` GREEN after `npm ci` in the new worktree:
+  - lint PASS
+  - typecheck PASS
+  - coverage PASS (`36` test files / `161` tests)
+  - build PASS
+- Mutation: N/A for planning-only work; no `src/domain` or `src/application` changes.
+
+## Team Modifications Pending Human Review
+
+- Review and approve or amend `specs/admin-users-viewer-MAZ-210.feature`.
+- Move `MAZ-210` out of `Backlog` only after approving the executable contract.
+- Confirm the MVP intentionally excludes search/filtering and user mutations.
+
+## Lessons / Limitations
+
+- `docs/design-patterns.md` and `docs/ai-log-template.md` are referenced by prompts but are not
+  present in the admin repo; `AGENTS.md`, `docs/architecture.md`, `docs/workflow.md`,
+  `docs/tdd.md`, `docs/reglas_clean_arch.md`, and prior admin contracts were used instead.
+- Local GitHub CLI remains unauthenticated/invalid; PR creation should use the GitHub connector
+  after pushing the branch.
 
 
 <!-- AI_LOG_ENTRIES_END -->
