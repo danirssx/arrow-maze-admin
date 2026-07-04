@@ -8,6 +8,7 @@ import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { AdminLevelsRoute } from "@/framework/level/AdminLevelsRoute";
 import { AdminLevelCreatorRoute } from "@/framework/level/AdminLevelCreatorRoute";
 import { AdminLevelEditorRoute } from "@/framework/level/AdminLevelEditorRoute";
+import { AdminLeaderboardRoute } from "@/framework/leaderboard/AdminLeaderboardRoute";
 import { RequireAdmin } from "./RequireAdmin";
 
 /** Public login route. Builds the login ViewModel from the composed use case. */
@@ -41,7 +42,7 @@ export function AppRouter() {
         { path: "levels", element: <AdminLevelsRoute /> },
         { path: "levels/new", element: <AdminLevelCreatorRoute /> },
         { path: "levels/new/visual", element: <AdminLevelEditorRoute /> },
-        { path: "leaderboard", element: <SectionPlaceholderScreen title="Leaderboard" /> },
+        { path: "leaderboard", element: <AdminLeaderboardRoute /> },
         { path: "users", element: <SectionPlaceholderScreen title="Users" /> },
       ],
     },
