@@ -85,6 +85,11 @@ export function LevelsView({
         </div>
       </div>
 
+      <p data-testid="archive-note" className="mb-4 text-xs text-text-muted">
+        Archiving removes a level from the game catalog but keeps its leaderboard and score history —
+        it is not a deletion. Create a replacement with <span className="font-semibold">New level</span>.
+      </p>
+
       {errorMessage !== null ? (
         <p data-testid="levels-error" className="mb-4 rounded-xl bg-reward-orange/10 px-4 py-3 text-sm font-semibold text-primary-900">
           {errorMessage}
@@ -154,6 +159,7 @@ export function LevelsView({
                             data-testid={`archive-${row.levelId}`}
                             disabled={pending}
                             onClick={() => onArchive(row.levelId)}
+                            title="Removes this level from the game catalog but keeps its score history — not a deletion."
                             className="rounded-lg border border-border-soft px-3 py-1 text-xs font-bold text-text-secondary disabled:opacity-50"
                           >
                             Archive
