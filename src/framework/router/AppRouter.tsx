@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider, useNavigate } from "react-router-dom";
 import { LoginScreen } from "@/presentation/auth/LoginScreen";
 import { LoginViewModel } from "@/presentation/auth/LoginViewModel";
-import { SectionPlaceholderScreen } from "@/presentation/screens/SectionPlaceholderScreen";
 import { useSession } from "@/framework/session/SessionContext";
 import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { AdminLevelsRoute } from "@/framework/level/AdminLevelsRoute";
@@ -43,8 +42,8 @@ export function AppRouter() {
         { path: "levels", element: <AdminLevelsRoute /> },
         { path: "levels/new", element: <AdminLevelCreatorRoute /> },
         { path: "levels/new/visual", element: <AdminLevelEditorRoute /> },
-        { path: "users", element: <SectionPlaceholderScreen title="Users" /> },
-        { path: "leaderboard", element: <SectionPlaceholderScreen title="Leaderboard" /> },
+        { path: "users", element: <AdminUsersRoute /> },
+        { path: "leaderboard", element: <AdminLeaderboardRoute /> },
       ],
     },
   ]);
