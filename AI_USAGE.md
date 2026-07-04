@@ -656,4 +656,81 @@ Pending implementation. The future TDD pass must map:
   but no mutation gate is applicable yet.
 
 
+---
+
+# AI Log - MAZ-209 Read-only leaderboard viewer (planning)
+
+Date: 2026-07-04
+Ticket: MAZ-209
+Repo: `arrow-maze-admin`
+
+## Task / Problem
+
+Prepare the executable contract for AD-08: a read-only admin leaderboard viewer that selects a
+level, reads `GET /leaderboard/:levelId`, shows top entries, handles empty/error states, and works
+for archived levels. Linear still has MAZ-209 in `Backlog`, so implementation was intentionally not
+started.
+
+## Tool and Model
+
+- OpenAI Codex CLI / GPT-5 coding agent.
+- Local shell, Git, Linear GraphQL read-only script using local `LINEAR_API_KEY`.
+
+## Prompt Used
+
+User asked to work on MAZ-209 following the repository AGENTS rules, reading `MEMORY.md`,
+`Linear_MCP_Guideline.md`, client/backend/admin context, creating a new worktree, recording AI
+usage, validating checks, committing, pushing, opening a PR, and updating Linear. The mandatory
+pipeline required stopping before TDD because no approved `.feature` existed and Linear state was
+`Backlog`.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/admin-leaderboard-viewer-MAZ-209.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/admin-leaderboard-viewer-MAZ-209.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Read to shape the Clean Architecture contract the future judge will enforce. | `specs/admin-leaderboard-viewer-MAZ-209.spec.md` |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | Read to confirm mutation applies after judge approval and implementation; no mutation run for planning-only work. | N/A |
+
+## Result Obtained
+
+- Created `specs/admin-leaderboard-viewer-MAZ-209.spec.md`.
+- Created `specs/admin-leaderboard-viewer-MAZ-209.feature` with scenarios `@s1` through `@s7`.
+- Confirmed backend contract:
+  - `GET /leaderboard/:levelId` returns `levelId`, optional `leaderboardId`/`updatedAt`, and
+    `entries[]` with rank, username snapshot, score, time, moves and submitted date.
+  - Known empty levels return `200 entries: []`.
+  - MAZ-200 guarantees archived known levels remain readable through the same endpoint.
+- No `src` or `tests` files were changed because the executable contract is not yet human-approved.
+
+## Scenario to Test Map
+
+Pending implementation. The future TDD pass must map:
+
+- `@s1` -> framework/UI test for selector options including ARCHIVED levels.
+- `@s2` -> presentation/UI + infrastructure mapping tests for populated leaderboard entries.
+- `@s3` -> presentation/UI + infrastructure mapping tests for `entries: []`.
+- `@s4` -> framework/view-model test proving ARCHIVED uses the same leaderboard read path.
+- `@s5` -> framework/UI test for backend error visibility and usable selector.
+- `@s6` -> presentation/UI test proving no edit/delete/submit actions render.
+- `@s7` -> framework/view-model test proving no request happens until a level is selected.
+
+## Team Modifications Pending Human Review
+
+- Human must approve `specs/admin-leaderboard-viewer-MAZ-209.feature` before production TDD.
+- Human should move MAZ-209 from `Backlog` to the approved implementation state according to the
+  Linear guideline.
+- Confirm the open question: AD-08 may reuse `GET /admin/levels` for the selector even though the
+  original ticket dependency list only names AD-02.
+
+## Lessons / Limitations
+
+- `docs/design-patterns.md` and `docs/ai-log-template.md` are referenced by prompts but are not
+  present in the admin repo.
+- Because this is planning-only, `npm run verify` validates repository health and contract files,
+  but no mutation gate is applicable yet.
+
+
 <!-- AI_LOG_ENTRIES_END -->
