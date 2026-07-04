@@ -900,6 +900,80 @@ Implementation is blocked, so this is the intended map for the future TDD pass:
 
 ---
 
+# AI Usage Log: MAZ-210 (AD-09) Read-only users viewer
+
+## Task / Problem
+
+Replace the `/users` placeholder with a real read-only admin Users section: a paginated table
+from `GET /admin/users` (BE-03/MAZ-197) showing username/email/role/status/createdAt, with
+pagination + loading/empty/error states, no user mutation, and **no `passwordHash`** ever mapped
+or rendered. The contract (`specs/admin-users-viewer-MAZ-210.*`) already existed on develop; this
+adds the implementation. Depends on AD-01 (auth/httpClient) + AD-02 (layout).
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-210` (the real feature, not just the contract) with the full branch process,
+following the repo `AGENTS.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging +
+`compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Followed the pre-approved contract `specs/admin-users-viewer-MAZ-210.spec.md` (read-only, page/limit, no passwordHash). | `specs/admin-users-viewer-MAZ-210.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Mapped the existing `@s1..@s7` to tests. | `specs/admin-users-viewer-MAZ-210.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Built the read vertical (port → use case → HTTP adapter → dumb view → route) mirroring AD-03. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), read-only (no mutation buttons), passwordHash never mapped, `@s`→test map, verify green, mutation 100% on the use case. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: overall **96.71%** (`ListAdminUsersUseCase` 100%). | `npm run mutation` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` rows show username/email/role/status/created | `tests/presentation/user/UsersView.test.tsx`, `tests/framework/user/AdminUsersRoute.test.tsx` |
+| `@s2` no passwordHash mapped/visible | `tests/infrastructure/user/HttpAdminUserApi.test.ts` (drops passwordHash), `ListAdminUsersUseCase.test.ts` |
+| `@s3` page change requests new page/limit | `AdminUsersRoute.test.tsx` (`page:2` after Next), `HttpAdminUserApi.test.ts` (`?page&limit`) |
+| `@s4` empty state | `UsersView.test.tsx`, `HttpAdminUserApi.test.ts` (empty page) |
+| `@s5` backend error shown | `UsersView.test.tsx` (error state) |
+| `@s6` no edit/suspend/delete/role/reset action | `UsersView.test.tsx` (only pagination buttons exist) |
+| `@s7` prev/next disabled per pagination metadata | `UsersView.test.tsx`, `useAdminUsers` (`canPrev`/`canNext`) |
+
+## Result Obtained
+
+- **application** — `user/AdminUser` (+ `AdminUsersPage`), `ports/IAdminUserApi`,
+  `user/use-cases/ListAdminUsersUseCase` (delegates `{page, limit}`).
+- **infrastructure** — `user/AdminUserDtos`, `user/HttpAdminUserApi` (`GET /admin/users?page&limit`;
+  maps only the 6 read-safe fields → `passwordHash`/unknown fields dropped at the boundary).
+- **presentation** — `user/UsersView` (dumb table + pagination + loading/empty/error; **no
+  mutation actions**; reuses AD-03 `formatCreatedAt`).
+- **framework** — `user/adminUserServices` (+ `useAdminUserServices`), `user/useAdminUsers`
+  (React Query VM: page state + backend-driven pagination), `user/AdminUsersRoute`; `/users`
+  route wired (placeholder removed).
+- `npm run verify` **GREEN** (lint + typecheck + coverage [216 tests / 49 files] + build);
+  `npm run mutation` **96.71%** (`ListAdminUsersUseCase` 100%).
+
+## Team modifications pending human review
+
+- The Linear ticket was already prematurely in "In Review" (only the docs/contract PR had landed);
+  this PR is the actual implementation. Left it In Review with a comment; humans close.
+
+## Lessons / Limitations
+
+- **`passwordHash` never leaves the boundary:** the HTTP adapter maps field-by-field, so a
+  sensitive/unknown field in the payload is dropped at infrastructure (asserted with a payload
+  that includes `passwordHash`). Presentation only ever sees the read DTO.
+- Read-only guarantee is tested structurally: the view renders only pagination buttons (no
+  edit/suspend/delete/role/reset), so no mutation affordance can regress in unnoticed.
+- Mirrors the AD-03 levels-list pattern (React Query VM + dumb view + services over the session
+  httpClient); branched off `origin/develop` (has AD-00..12).
+
+
+---
+
 # AI Usage Log: MAZ-212 (AD-11, Phase 2) Build + hosting of the admin SPA
 
 ## Task / Problem
