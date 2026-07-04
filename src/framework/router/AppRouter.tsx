@@ -8,6 +8,7 @@ import { AdminLayout } from "@/framework/layout/AdminLayout";
 import { AdminLevelsRoute } from "@/framework/level/AdminLevelsRoute";
 import { AdminLevelCreatorRoute } from "@/framework/level/AdminLevelCreatorRoute";
 import { AdminLevelEditorRoute } from "@/framework/level/AdminLevelEditorRoute";
+import { AdminLeaderboardRoute } from "@/framework/leaderboard/AdminLeaderboardRoute";
 import { AdminUsersRoute } from "@/framework/user/AdminUsersRoute";
 import { RequireAdmin } from "./RequireAdmin";
 
@@ -42,8 +43,8 @@ export function AppRouter() {
         { path: "levels", element: <AdminLevelsRoute /> },
         { path: "levels/new", element: <AdminLevelCreatorRoute /> },
         { path: "levels/new/visual", element: <AdminLevelEditorRoute /> },
+        { path: "users", element: <SectionPlaceholderScreen title="Users" /> },
         { path: "leaderboard", element: <SectionPlaceholderScreen title="Leaderboard" /> },
-        { path: "users", element: <AdminUsersRoute /> },
       ],
     },
   ]);
