@@ -584,6 +584,24 @@ logging + `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear update
 
 ---
 
+# AI Usage Log: MAZ-211 (AD-10, Phase 2) Visual level editor + figure picker
+
+## Task / Problem
+
+A visual authoring alternative to pasting JSON: pick a board figure (mask = `boardShape`), paint
+arrows on a grid (direction + colour), get live containment/ArrowSpec feedback, preview (AD-04),
+and publish — exporting the **same Phase-1 `LevelDefinition` JSON** so it reuses AD-06's
+create→publish. The backend validates the same. Phase-2 admin ticket (M11); depends on AD-06.
+
+## Tool and Model
+
+Claude Code / Claude Opus 4.8 (1M context).
+
+## Prompt Used
+
+Implement `MAZ-211` with the full branch process, following both repo `AGENTS.md`, the admin repo
+`AGENTS.md`/`docs/architecture.md`, root `MEMORY.md`, `Linear_MCP_Guideline.md`, AI usage logging
++ `compile-ai-usage.sh`, `npm run verify`, commit/push/PR, Linear updates.
 # AI Log - MAZ-208 Archive + recreate preserving scores (planning)
 
 Date: 2026-07-03
@@ -613,6 +631,60 @@ pipeline required stopping before TDD because no approved `.feature` existed and
 
 | Agent | Status | How it was used | Evidence |
 | --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | `specs/visual-level-editor-MAZ-211.spec.md`: made the Phase-2 scoping call (MVP in scope; undo/redo, drag-paint, in-place move, live solvability, extended figure library **deferred** and documented); per-layer CA impact; the application-facade boundary decision. | `specs/visual-level-editor-MAZ-211.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Gherkin `@s1..@s7`. | `specs/visual-level-editor-MAZ-211.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Pure figures/paint-rule/validation/export + application review + MVVM VM + dumb grid screen + route, test-first. | `tests/**` + `src/**` |
+| Judge (`.agents/judge.md`) | Referenced | Checklist: dependency rule inward-only (eslint green), ALL validation in domain/application (view dumb), export = Phase-1 JSON, reuses AD-06 publish + AD-04 preview, `@s`→test map, verify green, mutation ≥ gate. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Used | Stryker on domain+application: **96.56%** (application 100%; editor domain 94.84%). Remaining survivors are boundary/equivalent mutants in the adjacency/guard helpers. | `npm run mutation` |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` figure catalog | `tests/domain/editor/boardFigures.test.ts` |
+| `@s2` paint appends only valid cells | `tests/domain/editor/arrowEditing.test.ts` (`canAppendCell`), `tests/presentation/editor/LevelEditorViewModel.test.ts` |
+| `@s3` containment + ArrowSpec violations | `tests/domain/editor/validateEditorLevel.test.ts` (mask/connected/self-cross/head-into-body) |
+| `@s4` missing figure/name/difficulty/arrows | `validateEditorLevel.test.ts`, `tests/application/editor/reviewEditorLevel.test.ts` |
+| `@s5` export = Phase-1 JSON | `tests/domain/editor/exportLevelDefinition.test.ts` |
+| `@s6` review validates then exports | `reviewEditorLevel.test.ts` |
+| `@s7` screen paints/previews/publishes | `tests/presentation/editor/LevelEditorScreen.test.tsx`, `tests/framework/level/AdminLevelEditorRoute.test.tsx` (paint → create + publish POSTs → navigate) |
+
+## Result Obtained
+
+- **domain** — `editor/boardFigures` (SQUARE/DIAMOND/CROSS/HEART mask catalog on a 5×5 grid +
+  `figureById`), `editor/EditorArrow` (types + `ARROW_COLORS`/`ARROW_DIRECTIONS`/`cellKey`),
+  `editor/arrowEditing` (`canAppendCell` paint rule), `editor/EditorLevelModel`,
+  `editor/validateEditorLevel` (pure: required meta + unique ids + per-arrow containment +
+  connectivity + self-cross + head-not-into-body), `editor/exportLevelDefinition` (model →
+  Phase-1 JSON with the figure as the CELL_MASK).
+- **application** — `editor/reviewEditorLevel` (validate + export) and `editor/editorCatalog`
+  (facade re-exporting the domain editor primitives the presentation needs, so the view/VM
+  never import domain).
+- **presentation** — `editor/LevelEditorViewModel` (MVVM: model + draft path + selected
+  dir/colour; paint/undo-head/commit/remove; `canPublish`/`previewSource`/`publish`),
+  `editor/LevelEditorScreen` (dumb: figure picker, click-to-paint grid, dir/colour pickers,
+  arrow list, inline domain errors, AD-04 live preview, publish).
+- **framework** — `editor/AdminLevelEditorRoute` (reuses AD-06 `createAndPublishUseCase`),
+  `/levels/new/visual` route, `LevelsView` + `onCreateVisual` action, `AdminLevelsRoute` wires it.
+- `npm run verify` **GREEN** (lint + typecheck + coverage [202 tests / 44 files] + build);
+  `npm run mutation` **96.56%** on domain+application.
+
+## Team modifications pending human review
+
+- **Phase-2 scope call (documented in the spec):** delivered a complete MVP; deferred undo/redo,
+  drag-paint, in-place arrow *move* (satisfied by delete + repaint), **live solvability** (the
+  server validates the DAG at publish — the source of truth), and an extended figure library.
+
+## Lessons / Limitations
+
+- **All rules in domain/application:** figures, the paint rule, validation (incl. live
+  containment) and export are pure and unit-tested; the view is dumb and reaches them through
+  the application facade (`editorCatalog` + `reviewEditorLevel`) — presentation never imports
+  domain (same boundary as AD-01/03/04/05/06).
+- **Reuse over rebuild:** the editor exports the exact Phase-1 JSON, so it reuses AD-06's
+  create→publish and AD-04's preview unchanged — no second publish path, no shared engine.
+- Branched off AD-06 (`feat/create-publish-level-MAZ-207`) since AD-10 depends on AD-06, which is
+  not yet on `develop`.
 | Spec Partner (`.agents/spec-partner.md`) | Referenced | Read and applied the spec structure, Clean Architecture contract requirement, and open-question rule. | `specs/archive-recreate-preserve-scores-MAZ-208.spec.md` |
 | Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Read and applied stable `@s` Gherkin scenario tags and the no-production-before-approval rule. | `specs/archive-recreate-preserve-scores-MAZ-208.feature` |
 | TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Read to confirm TDD preconditions; no TDD was run because contract approval is pending. | N/A |

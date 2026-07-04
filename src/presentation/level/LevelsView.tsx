@@ -19,6 +19,8 @@ interface LevelsViewProps {
   expandedLevelId: string | null;
   /** Optional "New level" action (wired by the route to navigate to the creator). */
   onCreate?: () => void;
+  /** Optional "Visual editor" action (navigates to the AD-10 editor). */
+  onCreateVisual?: () => void;
 }
 
 /**
@@ -38,12 +40,23 @@ export function LevelsView({
   pendingLevelId,
   expandedLevelId,
   onCreate,
+  onCreateVisual,
 }: LevelsViewProps) {
   return (
     <section data-testid="levels-view">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-black text-text-primary">Levels</h1>
         <div className="flex items-center gap-3">
+          {onCreateVisual !== undefined ? (
+            <button
+              type="button"
+              data-testid="new-level-visual"
+              onClick={onCreateVisual}
+              className="rounded-xl border border-border-soft px-4 py-2 text-sm font-bold text-text-secondary active:opacity-80"
+            >
+              Visual editor
+            </button>
+          ) : null}
           {onCreate !== undefined ? (
             <button
               type="button"
