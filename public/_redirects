@@ -1,0 +1,3 @@
+# SPA fallback for Netlify (copied into dist/ at build): serve index.html for every
+# client-side route so deep links / hard refreshes don't 404. See netlify.toml + docs/deploy.md.
+/*    /index.html   200
