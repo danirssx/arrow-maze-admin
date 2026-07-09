@@ -118,6 +118,51 @@ describe("validateLevelDraft", () => {
     );
   });
 
+  it("should_accept_board_size_when_dimensions_and_arrows_are_within_limits", () => {
+    const draft = validDraft();
+    delete draft.boardShape;
+    draft.boardSize = { rows: 8, cols: 10 };
+
+    expect(validateLevelDraft(draft)).toEqual([]);
+  });
+
+  it("should_report_board_size_errors_when_dimensions_exceed_m12_limits", () => {
+    const draft = validDraft();
+    delete draft.boardShape;
+    draft.boardSize = { rows: 13, cols: 12 };
+
+    expect(validateLevelDraft(draft)).toContain("`boardSize` must not exceed 12 rows by 12 cols.");
+  });
+
+  it("should_report_arrow_count_error_when_more_than_sixty_arrows_are_defined", () => {
+    const draft = validDraft();
+    draft.arrows = Array.from({ length: 61 }, (_, index) => ({
+      id: `a-${index}`,
+      color: "cyan",
+      direction: "UP",
+      path: [{ row: 0, col: 0 }],
+    }));
+
+    expect(validateLevelDraft(draft)).toContain("`arrows` must not exceed 60 items.");
+  });
+
+  it("should_report_bounds_error_when_arrow_cell_is_outside_board_size", () => {
+    const draft = validDraft();
+    delete draft.boardShape;
+    draft.boardSize = { rows: 2, cols: 2 };
+    draft.arrows = [{ id: "a", color: "cyan", direction: "UP", path: [{ row: 0, col: 2 }] }];
+
+    expect(validateLevelDraft(draft)).toContain(
+      "arrow #1: path cell {row: 0, col: 2} must be inside `boardSize`.",
+    );
+  });
+
+  it("should_report_error_when_board_size_and_board_shape_are_combined", () => {
+    expect(validateLevelDraft({ ...validDraft(), boardSize: { rows: 2, cols: 2 } })).toContain(
+      "`boardSize` and `boardShape` cannot be combined.",
+    );
+  });
+
   it("reports a non-positive attempts and a non-positive timeLimit", () => {
     expect(validateLevelDraft({ ...validDraft(), attempts: 0 })).toContain(
       "`attempts` must be a positive integer.",
