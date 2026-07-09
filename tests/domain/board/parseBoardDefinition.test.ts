@@ -41,6 +41,20 @@ describe("parseBoardDefinition", () => {
     expect(def!.shapeCells).toEqual([]);
   });
 
+  it("should_parse_board_size_as_full_rectangle_mask_cells", () => {
+    const def = parseBoardDefinition({ arrows: [validArrow], boardSize: { rows: 2, cols: 3 } });
+
+    expect(def).not.toBeNull();
+    expect(def!.shapeCells).toEqual([
+      { row: 0, col: 0 },
+      { row: 0, col: 1 },
+      { row: 0, col: 2 },
+      { row: 1, col: 0 },
+      { row: 1, col: 1 },
+      { row: 1, col: 2 },
+    ]);
+  });
+
   it.each(["UP", "DOWN", "LEFT", "RIGHT"])("accepts the %s direction", (direction) => {
     const def = parseBoardDefinition({ arrows: [{ ...validArrow, direction }] });
     expect(def).not.toBeNull();
@@ -91,6 +105,21 @@ describe("parseBoardDefinition", () => {
     expect(parseBoardDefinition({ arrows: [validArrow], boardShape: { cells: [] } })).toBeNull();
     expect(
       parseBoardDefinition({ arrows: [validArrow], boardShape: { cells: [{ row: 0, col: "a" }] } }),
+    ).toBeNull();
+  });
+
+  it("should_reject_a_malformed_board_size", () => {
+    expect(parseBoardDefinition({ arrows: [validArrow], boardSize: { rows: 0, cols: 3 } })).toBeNull();
+    expect(parseBoardDefinition({ arrows: [validArrow], boardSize: { rows: 2, cols: 13 } })).toBeNull();
+  });
+
+  it("should_reject_combined_board_size_and_board_shape", () => {
+    expect(
+      parseBoardDefinition({
+        arrows: [validArrow],
+        boardSize: { rows: 2, cols: 3 },
+        boardShape: { type: "CELL_MASK", cells: [{ row: 0, col: 0 }] },
+      }),
     ).toBeNull();
   });
 });

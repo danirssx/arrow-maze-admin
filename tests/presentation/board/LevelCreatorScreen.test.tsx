@@ -25,7 +25,9 @@ function typeJson(json: string) {
 describe("LevelCreatorScreen", () => {
   it("always shows the expected schema", () => {
     renderScreen();
-    expect(screen.getByTestId("schema-example")).toHaveTextContent('"type": "CELL_MASK"');
+    expect(screen.getByTestId("schema-example")).toHaveTextContent('"boardSize"');
+    expect(screen.getByTestId("schema-example")).toHaveTextContent("12 x 12 max");
+    expect(screen.getByTestId("schema-example")).toHaveTextContent("60 arrows max");
   });
 
   it("renders the board preview and enables submit for valid JSON", () => {

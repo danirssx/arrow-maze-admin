@@ -1,6 +1,8 @@
 import type { ArrowDirection, BoardArrow, BoardCell, BoardDefinition } from "./BoardDefinition";
 
 const DIRECTIONS: readonly ArrowDirection[] = ["UP", "DOWN", "LEFT", "RIGHT"];
+const BOARD_SIZE_MAX_ROWS = 12;
+const BOARD_SIZE_MAX_COLS = 12;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -20,6 +22,25 @@ function parseCells(value: unknown): BoardCell[] | null {
     const cell = parseCell(item);
     if (cell === null) return null;
     cells.push(cell);
+  }
+  return cells;
+}
+
+function parseBoardSize(value: unknown): { rows: number; cols: number } | null {
+  if (!isRecord(value)) return null;
+  const { rows, cols } = value;
+  if (typeof rows !== "number" || typeof cols !== "number") return null;
+  if (!Number.isInteger(rows) || !Number.isInteger(cols)) return null;
+  if (rows < 1 || cols < 1 || rows > BOARD_SIZE_MAX_ROWS || cols > BOARD_SIZE_MAX_COLS) return null;
+  return { rows, cols };
+}
+
+function rectangleCells(rows: number, cols: number): BoardCell[] {
+  const cells: BoardCell[] = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      cells.push({ row, col });
+    }
   }
   return cells;
 }
@@ -53,7 +74,14 @@ export function parseBoardDefinition(raw: unknown): BoardDefinition | null {
   }
 
   let shapeCells: BoardCell[] = [];
-  if (raw.boardShape !== undefined) {
+  if (raw.boardSize !== undefined && raw.boardShape !== undefined) {
+    return null;
+  }
+  if (raw.boardSize !== undefined) {
+    const boardSize = parseBoardSize(raw.boardSize);
+    if (boardSize === null) return null;
+    shapeCells = rectangleCells(boardSize.rows, boardSize.cols);
+  } else if (raw.boardShape !== undefined) {
     if (!isRecord(raw.boardShape)) return null;
     const cells = parseCells(raw.boardShape.cells);
     if (cells === null) return null;
