@@ -46,6 +46,36 @@ describe("LevelEditorScreen", () => {
     );
   });
 
+  it("paints a custom board shape and publishes its CELL_MASK (@s2, @s7)", async () => {
+    const onPublish = vi.fn();
+    render(<LevelEditorScreen viewModel={new LevelEditorViewModel(onPublish)} />);
+
+    // switch to custom mode → the edit-board toggle appears and every cell is clickable
+    await userEvent.click(screen.getByTestId("mode-CUSTOM"));
+    expect(screen.getByTestId("edit-board")).toBeInTheDocument();
+    expect(screen.getByTestId("cell-4-4")).toBeEnabled();
+
+    // paint a custom L-shaped board mask
+    await userEvent.click(screen.getByTestId("cell-0-0"));
+    await userEvent.click(screen.getByTestId("cell-0-1"));
+
+    // paint an arrow inside the custom mask
+    await userEvent.click(screen.getByTestId("paint-arrows"));
+    await userEvent.click(screen.getByTestId("cell-0-0"));
+    await userEvent.click(screen.getByTestId("cell-0-1"));
+    await userEvent.click(screen.getByTestId("dir-RIGHT"));
+    await userEvent.click(screen.getByTestId("add-arrow"));
+    await userEvent.type(screen.getByTestId("name-input"), "Custom");
+
+    expect(screen.getByTestId("publish-level")).toBeEnabled();
+    await userEvent.click(screen.getByTestId("publish-level"));
+    expect(onPublish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        boardShape: { type: "CELL_MASK", cells: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
+      }),
+    );
+  });
+
   it("shows domain validation errors and a server error", async () => {
     const viewModel = new LevelEditorViewModel(vi.fn());
     const { rerender } = render(<LevelEditorScreen viewModel={viewModel} />);

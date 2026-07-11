@@ -8,7 +8,9 @@ function validModel(overrides: Partial<EditorLevelModel> = {}): EditorLevelModel
     description: "d",
     difficulty: "EASY",
     attempts: 5,
+    mode: "PRESET",
     figureId: "SQUARE",
+    customCells: [],
     arrows: [
       { id: "a", color: "cyan", direction: "RIGHT", path: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
     ],
@@ -98,5 +100,63 @@ describe("validateEditorLevel", () => {
       arrows: [{ id: "a", color: "cyan", direction: "UP", path: [{ row: 0, col: 0 }] }],
     });
     expect(validateEditorLevel(model)).toEqual([]);
+  });
+
+  // --- CUSTOM board authoring (MAZ-222) ---
+
+  function customModel(overrides: Partial<EditorLevelModel> = {}): EditorLevelModel {
+    return validModel({
+      mode: "CUSTOM",
+      figureId: null,
+      customCells: [{ row: 0, col: 0 }, { row: 0, col: 1 }],
+      arrows: [
+        { id: "a", color: "cyan", direction: "RIGHT", path: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("accepts a valid custom mask with arrows inside it", () => {
+    expect(validateEditorLevel(customModel())).toEqual([]);
+  });
+
+  it("requires at least one custom board cell (@s1)", () => {
+    expect(
+      validateEditorLevel(customModel({ customCells: [], arrows: [] })),
+    ).toContain("Select at least one board cell.");
+  });
+
+  it("rejects a custom cell outside the grid", () => {
+    expect(
+      validateEditorLevel(customModel({ customCells: [{ row: 0, col: 0 }, { row: 9, col: 9 }] })),
+    ).toContain("Every board cell must be inside the grid.");
+  });
+
+  it("allows a disconnected custom mask with valid arrows (@s4)", () => {
+    const model = customModel({
+      customCells: [{ row: 0, col: 0 }, { row: 4, col: 4 }],
+      arrows: [{ id: "a", color: "cyan", direction: "UP", path: [{ row: 0, col: 0 }] }],
+    });
+    expect(validateEditorLevel(model)).toEqual([]);
+  });
+
+  it("reports an arrow that leaves the custom mask (@s3)", () => {
+    const model = customModel({
+      customCells: [{ row: 0, col: 0 }],
+      arrows: [{ id: "a", color: "cyan", direction: "UP", path: [{ row: 3, col: 3 }] }],
+    });
+    expect(validateEditorLevel(model)).toContain(
+      "arrow #1: every cell must be inside the board figure.",
+    );
+  });
+
+  it("does not flag arrow containment while the custom mask is still empty", () => {
+    const model = customModel({
+      customCells: [],
+      arrows: [{ id: "a", color: "cyan", direction: "UP", path: [{ row: 0, col: 0 }] }],
+    });
+    const errors = validateEditorLevel(model);
+    expect(errors).toContain("Select at least one board cell.");
+    expect(errors).not.toContain("arrow #1: every cell must be inside the board figure.");
   });
 });
