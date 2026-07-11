@@ -1383,7 +1383,7 @@ Backlog for approval, following both repo `AGENTS.md` files, root `MEMORY.md`,
 | `@s1` empty custom mask is invalid | `specs/free-form-custom-board-mask-MAZ-222.feature` |
 | `@s2` toggling cells builds the board + previews custom shape | `specs/free-form-custom-board-mask-MAZ-222.feature` |
 | `@s3` toggling a cell off flags an arrow that used it | `specs/free-form-custom-board-mask-MAZ-222.feature` |
-| `@s4` disconnected custom mask rejected | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s4` disconnected custom mask allowed (connectivity not enforced) | `specs/free-form-custom-board-mask-MAZ-222.feature` |
 | `@s5` valid mask exports CELL_MASK of exactly the painted cells | `specs/free-form-custom-board-mask-MAZ-222.feature` |
 | `@s6` selecting a preset seeds the editable custom mask | `specs/free-form-custom-board-mask-MAZ-222.feature` |
 | `@s7` valid custom level publishes through the existing flow | `specs/free-form-custom-board-mask-MAZ-222.feature` |
@@ -1397,12 +1397,26 @@ Backlog for approval, following both repo `AGENTS.md` files, root `MEMORY.md`,
 - Filed Linear `MAZ-222` (M12-09) in Backlog with the embedded Clean Architecture contract.
 - No production code changed; no `src/` touched.
 
+## Open questions — resolved 2026-07-10 (human)
+
+The human accepted the proposals; verification then reversed one of them:
+
+1. Connectivity — **not enforced** (reversed from the initial "require connected region"
+   proposal). Verifying the backend showed `BoardShape` deliberately allows disconnected islands
+   ("so abstract disconnected islands remain authorable"); enforcing connectivity in the admin
+   would contradict that intent and add a needless rule. `@s4` was flipped from reject → allow.
+2. Grid size — **keep the fixed authoring grid**; variable dimensions up to 12x12 deferred.
+3. Presets — **seed-and-edit** (`@s6`).
+4. Backend — **confirmed, no backend change**. `CreateLevelUseCase.mapBoardShapeInput` →
+   `BoardShape.create` accepts an arbitrary CELL_MASK (`type` + `cells`), invariants non-empty /
+   duplicate-free / `<= 600` cells; solvability ignores the mask (unbounded raycast). Evidence in
+   `arrow-maze-backend/src/application/level-catalog/use-cases/CreateLevelUseCase.ts` and
+   `.../domain/level-catalog/value-objects/BoardShape.ts`.
+
 ## Team Modifications Pending Human Review
 
-- Human approval of the `@s1..@s8` contract is required before any TDD implementation.
-- Four open questions to confirm at the gate: (1) mask connectivity requirement, (2) fixed grid
-  vs. variable dimensions up to 12x12, (3) preset seed-and-edit vs. separate modes, (4) backend
-  acceptance of arbitrary CELL_MASK within the M12 envelope.
+- Explicit human "aprobado" of the `@s1..@s8` contract (and moving the ticket out of Backlog) is
+  still required before any TDD implementation.
 
 ## Lessons / Limitations
 

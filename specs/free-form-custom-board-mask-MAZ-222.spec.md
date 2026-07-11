@@ -3,8 +3,9 @@
 Date: 2026-07-10
 Ticket: `MAZ-222` (M12-09)
 Source: Linear `MAZ-222` / follow-up to MAZ-216 (M12-04) out-of-scope "irregular masked boardShape" + "full visual editor"
-Status: Backlog, draft for the human gate. The `@s` scenarios in
-`specs/free-form-custom-board-mask-MAZ-222.feature` must be approved before TDD.
+Status: Backlog. Open questions resolved by the human on 2026-07-10 (see Resolved decisions).
+The `@s1..@s8` scenarios in `specs/free-form-custom-board-mask-MAZ-222.feature` still need the
+explicit human "aprobado" (and the ticket moved out of Backlog) before TDD begins.
 
 ## Purpose
 
@@ -47,8 +48,11 @@ Domain invariants for the effective mask (enumerated):
 - The mask must contain at least one cell.
 - Every mask cell must be within the authoring grid bounds (`0 <= row < FIGURE_GRID_SIZE`,
   `0 <= col < FIGURE_GRID_SIZE`).
-- The mask must be a single orthogonally-connected region (no disconnected islands) — proposed;
-  see OPEN QUESTION 1.
+- Mask cells are duplicate-free (toggling is idempotent by cell key).
+- Connectivity is intentionally **not** enforced: disconnected islands are allowed. This aligns
+  the admin with the backend `BoardShape` VO, whose header states connectivity is deliberately
+  not enforced "so abstract disconnected islands remain authorable"
+  (`arrow-maze-backend/src/domain/level-catalog/value-objects/BoardShape.ts`).
 - Every arrow path cell must be inside the effective mask (existing rule, now over the custom
   mask).
 - Existing ArrowSpec rules are unchanged: path connected, no self-crossing, head not pointing
@@ -70,7 +74,7 @@ Applicable rules from `docs/reglas_clean_arch.md` (judge verifies each PASS/FAIL
 - [x] Application solo orquesta (no business rules; re-exports domain primitives via the
       `editorCatalog` facade)
 - [x] DTOs simples en fronteras (`BoardCell` records / CELL_MASK cells, no raw domain entities)
-- [x] Invariantes en dominio (mask non-empty/in-bounds/connected + arrow containment live in
+- [x] Invariantes en dominio (mask non-empty/in-bounds/duplicate-free + arrow containment live in
       pure domain, not the ViewModel/View)
 - [x] MVVM: View dumb (mode toggle + cell toggle intents), ViewModel presentation-only,
       composition root unchanged in framework
@@ -78,7 +82,7 @@ Applicable rules from `docs/reglas_clean_arch.md` (judge verifies each PASS/FAIL
 Layer impact:
 
 - Domain: extend `src/domain/editor/EditorLevelModel.ts` (authoring mode + custom mask cells);
-  new pure `src/domain/editor/boardMaskEditing.ts` (toggle cell, connectivity check),
+  new pure `src/domain/editor/boardMaskEditing.ts` (toggle cell in/out, duplicate-free),
   analogous to the existing `arrowEditing.ts`; extend
   `src/domain/editor/validateEditorLevel.ts` and `src/domain/editor/exportLevelDefinition.ts`
   to compute over the effective mask; `boardFigures.ts` unchanged (may add a seed helper).
@@ -102,10 +106,10 @@ Forbidden moves (must stay unchecked / not introduced):
 
 Required tests:
 
-- Domain: toggle adds/removes a mask cell; connectivity accepts a connected region and rejects a
-  disconnected island; empty mask rejected; out-of-bounds cell rejected; effective-mask arrow
-  containment (arrow outside custom mask rejected); export emits `CELL_MASK` with exactly the
-  custom cells; preset seeding produces the figure's cells as an editable mask.
+- Domain: toggle adds/removes a mask cell (idempotent, duplicate-free); empty mask rejected;
+  out-of-bounds cell rejected; a disconnected mask is accepted (no connectivity rule); effective-
+  mask arrow containment (arrow outside custom mask rejected); export emits `CELL_MASK` with
+  exactly the custom cells; preset seeding produces the figure's cells as an editable mask.
 - Application: `reviewEditorLevel` returns valid/invalid + exported value for custom masks.
 - Presentation/UI: mode toggle switches authoring; clicking a cell in CUSTOM paints/erases the
   mask; inline errors render; preview reflects the custom shape; publish enabled only when valid.
@@ -124,7 +128,8 @@ Architecture acceptance criteria:
   disabled.
 - Toggling off a cell an arrow uses → the existing containment rule flags that arrow; publish
   disabled until fixed.
-- Disconnected mask (two islands) → connectivity error; publish disabled (per OPEN QUESTION 1).
+- Disconnected mask (two islands) → allowed (valid), matching the backend `BoardShape` VO that
+  deliberately permits disconnected islands.
 - Switching PRESET → CUSTOM seeds from the current preset (or empty if none); switching back is
   allowed and does not silently drop authored arrows that still fit the mask.
 - Single-cell mask is valid (connected, non-empty) if arrows still satisfy ArrowSpec.
@@ -139,8 +144,9 @@ Architecture acceptance criteria:
   paintable, and the preview renders the custom shape.
 - S3: Given a custom mask cell that is currently on, When the author toggles it off, Then it
   leaves the mask, and any arrow that used it is flagged and publish is disabled.
-- S4: Given a custom mask with a disconnected island, When reviewed, Then an inline connectivity
-  error is shown and publish is disabled.
+- S4: Given a custom mask whose cells form two disconnected islands with otherwise valid arrows,
+  When reviewed, Then it is valid and publish is enabled (connectivity is not enforced, matching
+  the backend).
 - S5: Given a valid custom mask with valid arrows, When exported, Then the payload carries
   `boardShape: { type: "CELL_MASK", cells }` with exactly the painted cells.
 - S6: Given a preset is selected while in custom mode, When it seeds the mask, Then the mask holds
@@ -162,18 +168,30 @@ Architecture acceptance criteria:
   removing presets (regresses MAZ-211) or a fully separate parallel editor (duplication).
 - Keep the current fixed authoring grid for this slice. Reason: independent tracer bullet; the
   user's blocker is shape freedom, not size. Discarded: folding in 12x12 variable dimensions —
-  couples to MAZ-216 rectangular work; offered as OPEN QUESTION 2.
+  couples to MAZ-216 rectangular work; deferred to a follow-up.
+- Do **not** enforce mask connectivity; allow disconnected islands. Reason: the backend
+  `BoardShape` VO deliberately does not enforce connectivity "so abstract disconnected islands
+  remain authorable"; enforcing it in the only authoring tool would defeat that intent and add a
+  needless domain rule. Discarded: requiring a single connected region (would make the admin
+  stricter than the backend and block intended abstract boards).
 
-## Risks / OPEN QUESTIONS
+## Resolved decisions (were open questions; human approved 2026-07-10)
 
-1. Connectivity — require a single orthogonally-connected region (proposed, S4) or allow
-   arbitrary cell sets? A connected board matches every existing figure and avoids degenerate
-   islands, but adds a domain rule + test.
-2. Grid size — keep the current fixed authoring grid this slice (proposed) or fold in variable
-   dimensions up to 12x12 (MAZ-216 envelope) now? If folded in, scope grows to size controls +
-   in-bounds re-derivation and should reuse MAZ-216's `boardSize` limits.
-3. Preset interaction — seed-and-edit (proposed, S6) vs. presets and custom as fully separate,
-   non-seeding modes?
-4. Backend confirmation — confirm the create-level endpoint accepts an arbitrary CELL_MASK within
-   the M12 envelope and validates solvability (expected yes; no backend change). If it assumes a
-   preset/rectangle, a small backend slice is added.
+1. Connectivity — **not enforced**; disconnected islands are allowed (S4). Reversed from the
+   initial proposal after verifying the backend `BoardShape` VO deliberately permits disconnected
+   islands; enforcing connectivity in the admin would contradict that intent.
+2. Grid size — **keep the current fixed authoring grid** this slice. Variable dimensions up to
+   12x12 (MAZ-216 envelope) are a separate follow-up.
+3. Preset interaction — **seed-and-edit** (S6): selecting a preset seeds an editable custom mask.
+4. Backend — **confirmed, no backend change**. `CreateLevelUseCase` accepts an arbitrary
+   `boardShape` CELL_MASK (`type` + `cells`) via `mapBoardShapeInput` → `BoardShape.create`, with
+   invariants non-empty / duplicate-free / `<= BOARD_SHAPE_MAX_CELLS` (600); the 5x5 admin grid is
+   far under the cap. Solvability (`LevelSolvabilityPolicy`) uses an unbounded raycast and ignores
+   the mask, so disconnected islands do not affect solvability. Evidence:
+   `arrow-maze-backend/src/application/level-catalog/use-cases/CreateLevelUseCase.ts`,
+   `arrow-maze-backend/src/domain/level-catalog/value-objects/BoardShape.ts`.
+
+## Residual risks
+
+- The admin grid is fixed to `FIGURE_GRID_SIZE`; large custom boards need the deferred
+  variable-dimensions follow-up.
