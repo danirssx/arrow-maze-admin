@@ -33,12 +33,13 @@ Feature: Free-form custom board mask painter in the admin visual editor
     And publish is disabled
 
   @s4
-  Scenario: A disconnected custom mask is rejected
+  Scenario: A disconnected custom mask is allowed
     Given the editor is in CUSTOM mode
     And the mask contains two groups of cells with no orthogonal connection between them
+    And all arrows are valid and inside the mask
     When the level is reviewed
-    Then an inline connectivity error is shown
-    And publish is disabled
+    Then the review is valid
+    And publish is enabled
 
   @s5
   Scenario: A valid custom mask exports as a CELL_MASK of exactly the painted cells

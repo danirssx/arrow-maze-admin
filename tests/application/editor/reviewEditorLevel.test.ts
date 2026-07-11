@@ -8,7 +8,9 @@ function validModel(overrides: Partial<EditorLevelModel> = {}): EditorLevelModel
     description: "d",
     difficulty: "EASY",
     attempts: 5,
+    mode: "PRESET",
     figureId: "SQUARE",
+    customCells: [],
     arrows: [
       { id: "a", color: "cyan", direction: "RIGHT", path: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
     ],

@@ -3,9 +3,12 @@ import {
   ARROW_DIRECTIONS,
   canAppendCell,
   cellKey,
+  effectiveMaskCells,
   exportLevelDefinition,
   figureById,
+  toggleMaskCell,
   type ArrowDirection,
+  type BoardAuthoringMode,
   type BoardCell,
   type BoardFigureId,
   type EditorLevelModel,
@@ -18,6 +21,8 @@ export interface LevelEditorUiState {
   draftPath: BoardCell[];
   selectedDirection: ArrowDirection;
   selectedColor: string;
+  /** In CUSTOM mode, whether grid clicks toggle mask cells (true) or paint arrows (false). */
+  maskEditing: boolean;
   review: EditorReview;
 }
 
@@ -27,9 +32,16 @@ function initialModel(): EditorLevelModel {
     description: "Created with the visual editor",
     difficulty: "EASY",
     attempts: 5,
+    mode: "PRESET",
     figureId: null,
+    customCells: [],
     arrows: [],
   };
+}
+
+function figureCells(figureId: BoardFigureId): BoardCell[] {
+  const figure = figureById(figureId);
+  return figure !== undefined ? figure.cells.map((cell) => ({ row: cell.row, col: cell.col })) : [];
 }
 
 /**
@@ -48,6 +60,7 @@ export class LevelEditorViewModel extends ObservableViewModel<LevelEditorUiState
       draftPath: [],
       selectedDirection: ARROW_DIRECTIONS[0]!,
       selectedColor: ARROW_COLORS[0],
+      maskEditing: false,
       review: reviewEditorLevel(model),
     });
   }
@@ -74,15 +87,45 @@ export class LevelEditorViewModel extends ObservableViewModel<LevelEditorUiState
 
   selectFigure(figureId: BoardFigureId): void {
     const state = this.getState();
-    const model = { ...state.model, figureId };
+    // In CUSTOM mode a figure seeds the editable mask (seed-and-edit); in PRESET it is the mask.
+    const customCells = state.model.mode === "CUSTOM" ? figureCells(figureId) : state.model.customCells;
+    const model = { ...state.model, figureId, customCells };
     // Reset the in-progress draft: its cells may no longer be inside the new mask.
     this.setState({ ...state, model, draftPath: [], review: reviewEditorLevel(model) });
   }
 
+  /** Switch the board authoring mode. Entering CUSTOM seeds from the current preset if empty. */
+  setMode(mode: BoardAuthoringMode): void {
+    const state = this.getState();
+    let { customCells } = state.model;
+    if (mode === "CUSTOM" && customCells.length === 0 && state.model.figureId !== null) {
+      customCells = figureCells(state.model.figureId);
+    }
+    const model = { ...state.model, mode, customCells };
+    this.setState({
+      ...state,
+      model,
+      draftPath: [],
+      maskEditing: mode === "CUSTOM",
+      review: reviewEditorLevel(model),
+    });
+  }
+
+  /** Toggle whether grid clicks edit the board mask (CUSTOM only) or paint arrows. */
+  setMaskEditing(maskEditing: boolean): void {
+    this.setState({ ...this.getState(), maskEditing, draftPath: [] });
+  }
+
+  /** Add/remove a cell from the free-form custom mask (CUSTOM mode only). */
+  toggleMaskCell(cell: BoardCell): void {
+    const state = this.getState();
+    if (state.model.mode !== "CUSTOM") return;
+    const model = { ...state.model, customCells: toggleMaskCell(state.model.customCells, cell) };
+    this.setState({ ...state, model, draftPath: [], review: reviewEditorLevel(model) });
+  }
+
   private maskKeys(): ReadonlySet<string> {
-    const figureId = this.getState().model.figureId;
-    const figure = figureId !== null ? figureById(figureId) : undefined;
-    return new Set(figure !== undefined ? figure.cells.map(cellKey) : []);
+    return new Set(effectiveMaskCells(this.getState().model).map(cellKey));
   }
 
   /** Click a grid cell: remove it if it is the draft head (undo), else append if allowed. */

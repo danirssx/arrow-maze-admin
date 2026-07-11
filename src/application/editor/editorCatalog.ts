@@ -8,6 +8,11 @@ export type { BoardFigure, BoardFigureId } from "@/domain/editor/boardFigures";
 export { ARROW_COLORS, ARROW_DIRECTIONS, cellKey } from "@/domain/editor/EditorArrow";
 export type { EditorArrow } from "@/domain/editor/EditorArrow";
 export { canAppendCell } from "@/domain/editor/arrowEditing";
+export {
+  effectiveMaskCells,
+  isCellInsideGrid,
+  toggleMaskCell,
+} from "@/domain/editor/boardMaskEditing";
 export { exportLevelDefinition } from "@/domain/editor/exportLevelDefinition";
-export type { EditorLevelModel } from "@/domain/editor/EditorLevelModel";
+export type { BoardAuthoringMode, EditorLevelModel } from "@/domain/editor/EditorLevelModel";
 export type { ArrowDirection, BoardCell } from "@/domain/board/BoardDefinition";
