@@ -4,7 +4,7 @@ import {
   BOARD_FIGURES,
   FIGURE_GRID_SIZE,
   cellKey,
-  figureById,
+  effectiveMaskCells,
 } from "@/application/editor/editorCatalog";
 import { useViewModelState } from "@/presentation/hooks/useViewModelState";
 import { BoardPreview } from "@/presentation/board/BoardPreview";
@@ -29,10 +29,10 @@ export function LevelEditorScreen({
   isSubmitting = false,
 }: LevelEditorScreenProps) {
   const state = useViewModelState(viewModel);
-  const { model, draftPath, selectedDirection, selectedColor, review } = state;
+  const { model, draftPath, selectedDirection, selectedColor, maskEditing, review } = state;
 
-  const figure = model.figureId !== null ? figureById(model.figureId) : undefined;
-  const maskKeys = new Set(figure !== undefined ? figure.cells.map(cellKey) : []);
+  const maskKeys = new Set(effectiveMaskCells(model).map(cellKey));
+  const isMaskEditing = model.mode === "CUSTOM" && maskEditing;
   const draftKeys = new Set(draftPath.map(cellKey));
   const arrowColorByCell = new Map<string, string>();
   model.arrows.forEach((arrow) => arrow.path.forEach((cell) => arrowColorByCell.set(cellKey(cell), arrow.color)));
@@ -69,7 +69,61 @@ export function LevelEditorScreen({
           </div>
 
           <div className="mt-4">
-            <span className="text-xs font-semibold text-text-secondary">Board figure</span>
+            <span className="text-xs font-semibold text-text-secondary">Board</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {(["PRESET", "CUSTOM"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  data-testid={`mode-${m}`}
+                  aria-pressed={model.mode === m}
+                  onClick={() => viewModel.setMode(m)}
+                  className={`rounded-lg border px-3 py-1 text-xs font-bold ${
+                    model.mode === m
+                      ? "border-primary-700 bg-primary-700 text-text-inverse"
+                      : "border-border-soft text-text-secondary"
+                  }`}
+                >
+                  {m === "PRESET" ? "Preset figure" : "Custom shape"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {model.mode === "CUSTOM" ? (
+            <div className="mt-3">
+              <span className="text-xs font-semibold text-text-secondary">Custom board</span>
+              <div className="mt-1 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  data-testid="edit-board"
+                  aria-pressed={maskEditing}
+                  onClick={() => viewModel.setMaskEditing(true)}
+                  className={`rounded-lg border px-3 py-1 text-xs font-bold ${
+                    maskEditing ? "border-primary-700 text-primary-900" : "border-border-soft text-text-secondary"
+                  }`}
+                >
+                  Edit board
+                </button>
+                <button
+                  type="button"
+                  data-testid="paint-arrows"
+                  aria-pressed={!maskEditing}
+                  onClick={() => viewModel.setMaskEditing(false)}
+                  className={`rounded-lg border px-3 py-1 text-xs font-bold ${
+                    !maskEditing ? "border-primary-700 text-primary-900" : "border-border-soft text-text-secondary"
+                  }`}
+                >
+                  Paint arrows
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            <span className="text-xs font-semibold text-text-secondary">
+              {model.mode === "CUSTOM" ? "Start from figure" : "Board figure"}
+            </span>
             <div className="mt-1 flex flex-wrap gap-2">
               {BOARD_FIGURES.map((f) => (
                 <button
@@ -136,16 +190,23 @@ export function LevelEditorScreen({
                   const inMask = maskKeys.has(key);
                   const inDraft = draftKeys.has(key);
                   const committed = arrowColorByCell.get(key);
+                  // When editing the custom board, every cell is clickable to toggle membership;
+                  // otherwise only mask cells are clickable for painting arrows.
+                  const clickable = isMaskEditing ? true : inMask;
                   const background = inDraft ? "#94A3B8" : (committed ?? (inMask ? "#EEF1FF" : "transparent"));
                   return (
                     <button
                       key={c}
                       type="button"
                       data-testid={`cell-${r}-${c}`}
-                      disabled={!inMask}
-                      onClick={() => viewModel.paintCell({ row: r, col: c })}
+                      disabled={!clickable}
+                      onClick={() =>
+                        isMaskEditing
+                          ? viewModel.toggleMaskCell({ row: r, col: c })
+                          : viewModel.paintCell({ row: r, col: c })
+                      }
                       style={{ backgroundColor: background }}
-                      className={`m-0.5 h-8 w-8 rounded ${inMask ? "border border-border-soft" : "opacity-20"}`}
+                      className={`m-0.5 h-8 w-8 rounded ${clickable ? "border border-border-soft" : "opacity-20"}`}
                     />
                   );
                 })}

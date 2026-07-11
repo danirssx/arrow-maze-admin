@@ -1331,4 +1331,213 @@ because this is a refactor/factorization.
   work if the backend contract is approved as written.
 
 
+---
+
+# AI Usage Log: MAZ-222 free-form custom board mask painter (admin implementation)
+
+## Task / Problem
+
+Implement `MAZ-222` / M12-09 after the human approved the `@s1..@s8` Gherkin contract: add a
+free-form CUSTOM board authoring mode to the admin visual editor so admins can paint an irregular
+board mask (not only the 4 preset figures), paint arrows inside it, and publish via the existing
+create/publish path. Exports the same `boardShape: CELL_MASK` contract; no backend/mobile change.
+
+## Tool and Model
+
+Claude Code / claude-opus-4-8 (1M context).
+
+## Prompt Used
+
+The user evaluated MAZ-216, approved creating the follow-up MAZ-222, resolved the four open
+questions with the proposed answers, and then gave the explicit "aprobado" for the Gherkin
+contract, authorizing the TDD implementation.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Spec authored in the planning session; not re-run. | `specs/free-form-custom-board-mask-MAZ-222.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | `@s1..@s8` contract from planning; `@s4` flipped after backend verification. | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Test-first domain→application→presentation; effective-mask model + pure `boardMaskEditing`; existing fixtures updated for the new required fields. | tests + `src/domain/editor/*`, `src/presentation/editor/*` |
+| Judge (`.agents/judge.md`) | Referenced | Kept the dependency rule inward-only (presentation imports the `editorCatalog` facade, never domain); no new use case/route/pattern. | `src/application/editor/editorCatalog.ts` |
+| Mutation Tester (`.agents/mutation.md`) | Used | Scoped Stryker on the new/changed domain files. | `ai-log/2026-07-10-MAZ-222-mutation.md` (score below) |
+
+## Scenario Coverage (@s -> test)
+
+| Scenario | Test evidence |
+| --- | --- |
+| `@s1` empty custom mask invalid | `validateEditorLevel.test.ts` "requires at least one custom board cell (@s1)"; `LevelEditorViewModel.test.ts` "cannot publish with an empty custom mask (@s1)" |
+| `@s2` toggling cells builds the board + preview | `LevelEditorScreen.test.tsx` "paints a custom board shape and publishes its CELL_MASK (@s2, @s7)" |
+| `@s3` toggling a cell off flags an arrow that used it | `validateEditorLevel.test.ts` "reports an arrow that leaves the custom mask (@s3)" |
+| `@s4` disconnected mask allowed | `validateEditorLevel.test.ts` "allows a disconnected custom mask (@s4)"; `LevelEditorViewModel.test.ts` "allows publishing a disconnected custom mask (@s4)" |
+| `@s5` export CELL_MASK of exactly the painted cells | `exportLevelDefinition.test.ts` "exports the custom cells as the boardShape CELL_MASK (@s5)" |
+| `@s6` preset seeds the editable mask | `LevelEditorViewModel.test.ts` "seeds the custom mask from the selected preset..." / "...while already in CUSTOM mode (@s6)" |
+| `@s7` publish through the existing flow | `LevelEditorViewModel.test.ts` "builds and publishes a custom-shaped level... (@s5, @s7)"; `LevelEditorScreen.test.tsx` (@s2, @s7) |
+| `@s8` backend rejection surfaced | `LevelEditorScreen.test.tsx` "shows domain validation errors and a server error" (unchanged server-error path reused) |
+
+## Result Obtained
+
+- Domain: `EditorLevelModel` gains `mode: "PRESET" | "CUSTOM"` + `customCells`; new pure
+  `boardMaskEditing.ts` (`toggleMaskCell`, `isCellInsideGrid`, `effectiveMaskCells`);
+  `validateEditorLevel` and `exportLevelDefinition` now operate over the effective mask; no
+  connectivity rule (aligns with backend `BoardShape`).
+- Application: `editorCatalog` re-exports the new primitives + `BoardAuthoringMode`.
+- Presentation: `LevelEditorViewModel` adds `setMode`/`setMaskEditing`/`toggleMaskCell` and
+  seed-on-`selectFigure`; `LevelEditorScreen` adds the mode selector, an Edit-board/Paint-arrows
+  toggle, and mask-toggling grid clicks in CUSTOM mode.
+- `npm run verify` GREEN: lint + typecheck + coverage (55 files / 264 tests) + build.
+- Scoped mutation on the new domain files: see score in `ai-log/2026-07-10-MAZ-222-mutation.md`.
+
+## Team Modifications Pending Human Review
+
+- Domain/application tests are subject to mandatory human review.
+- Follow-up (deferred): variable board dimensions up to 12x12 in the visual editor.
+
+## Lessons / Limitations
+
+- Verifying the backend `BoardShape` VO before coding prevented shipping a connectivity rule that
+  would have contradicted the backend's deliberate "disconnected islands remain authorable"
+  design; `@s4` was flipped from reject to allow.
+- The authoring grid remains fixed to `FIGURE_GRID_SIZE`; large custom boards need the deferred
+  variable-dimensions follow-up.
+
+
+---
+
+# AI Usage Log: MAZ-222 free-form custom board mask painter (admin planning)
+
+## Task / Problem
+
+Prepare the admin-side executable contract for `MAZ-222` / M12-09: add a free-form custom
+board mask mode to the visual editor so admins can author irregular board shapes instead of
+being limited to the 4 preset figures (SQUARE, DIAMOND, CROSS, HEART). This is the follow-up to
+MAZ-216 (M12-04), whose Decision + Out-of-scope explicitly deferred the "full visual editor" and
+"irregular masked boardShape" authoring.
+
+This is a planning/human-gate change only. No production code was written, because no approved
+MAZ-222 `.feature` contract exists yet.
+
+## Root-cause note (why MAZ-216 did not satisfy the request)
+
+MAZ-216 was scoped to **rectangular** boards authored via the JSON creator; the visual editor's
+preset figure system was left untouched by design. The export/persistence contract already emits
+`boardShape: CELL_MASK` (DIAMOND/CROSS/HEART are already irregular masks) and the create-level
+backend already accepts it, so custom-shape authoring is admin presentation + admin domain
+validation work — no backend/mobile change expected.
+
+## Tool and Model
+
+Claude Code / claude-opus-4-8 (1M context).
+
+## Prompt Used
+
+The user asked to evaluate MAZ-216 (felt the solution was insufficient — wants to draw a custom
+board shape in the visual editor), and, after the evaluation, to create the follow-up ticket:
+draft the spec + Gherkin in a new worktree, leave a draft PR, and file the Linear ticket in
+Backlog for approval, following both repo `AGENTS.md` files, root `MEMORY.md`,
+`Linear_MCP_Guideline.md`, worktree-per-ticket, AI usage logging, and commit/push/PR/Linear.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read the current editor (`boardFigures`, `EditorLevelModel`, `validateEditorLevel`, `exportLevelDefinition`, `LevelEditorViewModel`, `LevelEditorScreen`) and MAZ-216/211 contracts; distilled the draft spec with decisions and open questions. No separate agent session was run. | `specs/free-form-custom-board-mask-MAZ-222.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote the executable Gherkin `@s1..@s8` for the human gate and filed the Backlog ticket. | `specs/free-form-custom-board-mask-MAZ-222.feature`, Linear `MAZ-222` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Not used | No TDD implementation started; the contract needs human approval first. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Applied the Clean Architecture checklist to the proposed layer impact and forbidden moves. | this log + spec `## Clean Architecture contract` |
+| Mutation Tester (`.agents/mutation.md`) | Not used | Not applicable to a contract-only planning change. | N/A |
+
+## Scenario Coverage (@s -> evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` empty custom mask is invalid | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s2` toggling cells builds the board + previews custom shape | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s3` toggling a cell off flags an arrow that used it | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s4` disconnected custom mask allowed (connectivity not enforced) | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s5` valid mask exports CELL_MASK of exactly the painted cells | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s6` selecting a preset seeds the editable custom mask | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s7` valid custom level publishes through the existing flow | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s8` backend rejection surfaced | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+
+## Result Obtained
+
+- Added `specs/free-form-custom-board-mask-MAZ-222.spec.md` (behavior, effective-mask model,
+  Clean Architecture contract, edge cases, decisions, open questions).
+- Added `specs/free-form-custom-board-mask-MAZ-222.feature` with `@s1..@s8`.
+- Filed Linear `MAZ-222` (M12-09) in Backlog with the embedded Clean Architecture contract.
+- No production code changed; no `src/` touched.
+
+## Open questions — resolved 2026-07-10 (human)
+
+The human accepted the proposals; verification then reversed one of them:
+
+1. Connectivity — **not enforced** (reversed from the initial "require connected region"
+   proposal). Verifying the backend showed `BoardShape` deliberately allows disconnected islands
+   ("so abstract disconnected islands remain authorable"); enforcing connectivity in the admin
+   would contradict that intent and add a needless rule. `@s4` was flipped from reject → allow.
+2. Grid size — **keep the fixed authoring grid**; variable dimensions up to 12x12 deferred.
+3. Presets — **seed-and-edit** (`@s6`).
+4. Backend — **confirmed, no backend change**. `CreateLevelUseCase.mapBoardShapeInput` →
+   `BoardShape.create` accepts an arbitrary CELL_MASK (`type` + `cells`), invariants non-empty /
+   duplicate-free / `<= 600` cells; solvability ignores the mask (unbounded raycast). Evidence in
+   `arrow-maze-backend/src/application/level-catalog/use-cases/CreateLevelUseCase.ts` and
+   `.../domain/level-catalog/value-objects/BoardShape.ts`.
+
+## Team Modifications Pending Human Review
+
+- Explicit human "aprobado" of the `@s1..@s8` contract (and moving the ticket out of Backlog) is
+  still required before any TDD implementation.
+
+## Lessons / Limitations
+
+- The persistence/export contract already supports irregular CELL_MASK; the only real gap was
+  the authoring UI offering fixed presets — so "any shape" is mostly a presentation + domain
+  validation slice, not a cross-repo change.
+- Keeping grid size fixed keeps this an independent tracer bullet; combining it with MAZ-216's
+  variable dimensions would couple two features and is deferred as an open question.
+
+
+---
+
+# Mutation Report: MAZ-222 free-form custom board mask (admin)
+
+## Scope
+
+Scoped Stryker run on the new/changed domain files for MAZ-222:
+
+- `src/domain/editor/boardMaskEditing.ts`
+- `src/domain/editor/validateEditorLevel.ts`
+- `src/domain/editor/exportLevelDefinition.ts`
+
+Command:
+
+```
+npx stryker run --mutate "src/domain/editor/boardMaskEditing.ts,src/domain/editor/validateEditorLevel.ts,src/domain/editor/exportLevelDefinition.ts"
+```
+
+## Score
+
+| File | Mutation score |
+| --- | --- |
+| All files (scoped) | **93.50%** |
+| boardMaskEditing.ts | 92.73% |
+| exportLevelDefinition.ts | 100.00% |
+| validateEditorLevel.ts | 93.13% |
+
+Break threshold 80, high 90 — PASS. 181 killed, 6 timeout, 13 survived.
+
+## Notes
+
+- Added `validateEditorLevel.test.ts` "does not flag arrow containment while the custom mask is
+  still empty" to kill the `maskCells.length > 0` → `>= 0` survivor (a null-vs-empty-Set
+  difference that would spuriously flag arrows when no board cell is painted yet). Score rose
+  92.50% → 93.50%.
+- Residual survivors are largely equivalent mutants: error-message string tweaks already asserted
+  by containment/`toContain` tests, and boundary rewrites on the fixed-grid bounds checks in
+  `boardMaskEditing.isCellInsideGrid` that do not change observable validity for in-grid authoring.
+- `validateEditorLevel.ts` also carries pre-existing ArrowSpec logic (shared with MAZ-211) whose
+  timeouts/survivors are unchanged by this ticket.
+
+
 <!-- AI_LOG_ENTRIES_END -->

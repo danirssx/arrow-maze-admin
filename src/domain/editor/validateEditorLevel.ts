@@ -1,5 +1,6 @@
 import type { ArrowDirection, BoardCell } from "@/domain/board/BoardDefinition";
 import { cellKey, type EditorArrow } from "./EditorArrow";
+import { effectiveMaskCells, isCellInsideGrid } from "./boardMaskEditing";
 import { figureById } from "./boardFigures";
 import type { EditorLevelModel } from "./EditorLevelModel";
 
@@ -70,8 +71,13 @@ export function validateEditorLevel(model: EditorLevelModel): string[] {
     errors.push("`difficulty` must be one of EASY, MEDIUM, HARD.");
   }
 
-  const figure = model.figureId !== null ? figureById(model.figureId) : undefined;
-  if (figure === undefined) {
+  if (model.mode === "CUSTOM") {
+    if (model.customCells.length === 0) {
+      errors.push("Select at least one board cell.");
+    } else if (model.customCells.some((cell) => !isCellInsideGrid(cell))) {
+      errors.push("Every board cell must be inside the grid.");
+    }
+  } else if (model.figureId === null || figureById(model.figureId) === undefined) {
     errors.push("A board figure must be selected.");
   }
 
@@ -84,7 +90,8 @@ export function validateEditorLevel(model: EditorLevelModel): string[] {
     errors.push("Arrow ids must be unique.");
   }
 
-  const maskKeys = figure !== undefined ? new Set(figure.cells.map(cellKey)) : null;
+  const maskCells = effectiveMaskCells(model);
+  const maskKeys = maskCells.length > 0 ? new Set(maskCells.map(cellKey)) : null;
   model.arrows.forEach((arrow, index) => validateArrow(arrow, index, maskKeys, errors));
 
   return errors;
