@@ -1190,4 +1190,227 @@ Implement `MAZ-212` with the full branch process, following both repo `AGENTS.md
   config-integrity test provides a green regression guard instead.
 
 
+---
+
+# AI Usage Log: MAZ-216 flexible rectangular board definitions (admin implementation)
+
+## Task / Problem
+
+Implement the approved MAZ-216 admin contract after human approval of the planning PR:
+the JSON creator accepts rectangular `boardSize`, validates M12 limits locally, previews the
+full rectangle including empty cells, updates the schema help text, and preserves existing
+legacy `boardShape` behavior where applicable.
+
+## Tool and Model
+
+Codex CLI / GPT-5.
+
+## Prompt Used
+
+The user confirmed the MAZ-216 planning PRs were approved and asked to continue with
+the ticket implementation, still following `AGENTS.md`, the TDD gate, AI logging,
+checks, commit/push/PR, Linear, and MEMORY updates.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Used the approved MAZ-216 admin spec to keep M12 rectangles separate from MAZ-211 irregular masks. | `specs/flexible-rectangular-boards-MAZ-216.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Implemented against the approved `@s1..@s7` Gherkin scenarios. | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Referenced | Added failing tests first for validator, parser, preview, review orchestration, and schema UI; then implemented pure domain/application/presentation changes. | tests listed below |
+| Judge (`.agents/judge.md`) | Referenced | Checked layer placement: pure domain validation/parse, application orchestration unchanged, dumb presentation schema text only. | `npm run verify` |
+| Mutation Tester (`.agents/mutation.md`) | Referenced | Ran focused Stryker mutation on touched domain files; no separate mutation-agent session was run. | mutation score below |
+
+## Scenario Coverage (@s -> test/evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` valid non-preset rectangle validates and previews | `validateLevelDraft.test should_accept_board_size_when_dimensions_and_arrows_are_within_limits`, `parseBoardDefinition.test should_parse_board_size_as_full_rectangle_mask_cells`, `toBoardPreview.test should_preview_the_full_rectangle_when_board_size_is_present` |
+| `@s2` legacy JSON without `boardSize` keeps existing behavior | existing `validateLevelDraft`, `parseBoardDefinition`, and `toBoardPreview` legacy tests |
+| `@s3` oversize dimensions rejected locally | `validateLevelDraft.test should_report_board_size_errors_when_dimensions_exceed_m12_limits`, `reviewLevelJson.test should_report_invalid_when_board_size_exceeds_m12_limits` |
+| `@s4` more than 60 arrows rejected locally | `validateLevelDraft.test should_report_arrow_count_error_when_more_than_sixty_arrows_are_defined` |
+| `@s5` arrow cells outside rectangle rejected locally | `validateLevelDraft.test should_report_bounds_error_when_arrow_cell_is_outside_board_size` |
+| `@s6` creator documents rectangular schema | `LevelCreatorScreen.test always shows the expected schema` |
+| `@s7` backend errors are surfaced | existing `LevelCreatorScreen.test shows a server error and blocks submit while a request is in flight` |
+
+## Result Obtained
+
+- `validateLevelDraft` now validates optional `boardSize`, rejects mixed `boardSize` +
+  `boardShape`, enforces `12 x 12`, enforces max `60` arrows, and checks arrow path bounds.
+- `parseBoardDefinition` now turns `boardSize` into full rectangle mask cells for preview and
+  rejects malformed or mixed rectangular/masked input.
+- `toBoardPreview` now previews full rectangular dimensions via the parsed rectangle cells.
+- `levelJsonSchemaExample` documents `boardSize` and the M12 limits.
+
+## Verification
+
+- Focused red/green tests: `npm test -- tests/domain/board/validateLevelDraft.test.ts tests/domain/board/parseBoardDefinition.test.ts tests/application/board/toBoardPreview.test.ts tests/application/board/reviewLevelJson.test.ts tests/presentation/board/LevelCreatorScreen.test.tsx` -> `5` files / `58` tests green.
+- Full gate: `npm run verify` -> GREEN (`54` files / `240` tests, lint, typecheck, coverage, build).
+- Mutation: `npm run mutation -- --mutate src/domain/board/parseBoardDefinition.ts,src/domain/board/validateLevelDraft.ts` -> `86.65%` (break threshold `80%`).
+
+## Team Modifications Pending Human Review
+
+- Existing MAZ-211 visual editor still exports `boardShape` masks. This implementation leaves
+  that path unchanged; MAZ-216 rectangular JSON authoring uses `boardSize`.
+
+## Lessons / Limitations
+
+- The preview already rendered masks, so the cleanest admin implementation is to translate
+  `boardSize` into rectangle mask cells before geometry.
+- Several Stryker survivors are redundant guard mutations around generic JSON shape checks;
+  the focused score remains above the required threshold.
+
+
+---
+
+# AI Usage Log: MAZ-216 flexible rectangular board definitions (admin planning)
+
+## Task / Problem
+
+Prepare the admin-side executable contract for `MAZ-216` / M12-04: allow non-preset
+rectangular board definitions in admin level creation while enforcing M12 limits
+(`12 x 12`, `60` arrows), preserving existing MAZ-205/206/207 behavior, and keeping
+MAZ-211 irregular visual-editor masks out of this slice.
+
+This is a planning/human-gate change only. No production code was written because no
+approved MAZ-216 `.feature` contract existed before this session.
+
+## Tool and Model
+
+Codex CLI / GPT-5.
+
+## Prompt Used
+
+The user asked to start `MAZ-216`, following both repo `AGENTS.md` files, root
+`MEMORY.md`, `Linear_MCP_Guideline.md`, new worktrees, AI usage logging,
+`compile-ai-usage.sh`, checks, commit/push/PR/Linear, and to review affected tickets
+because this is a refactor/factorization.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Distilled the Linear ticket and existing MAZ-205/206/207/211 contracts into a draft admin spec; no separate agent session was run. | `specs/flexible-rectangular-boards-MAZ-216.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote the executable admin Gherkin scenarios `@s1..@s7` for the human gate. | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Not used | No TDD implementation was started because the MAZ-216 contract still needs human approval. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Applied the Clean Architecture checklist to the proposed layer impact and forbidden moves. | this log + spec |
+| Mutation Tester (`.agents/mutation.md`) | Not used | Mutation testing is not applicable to a contract-only planning change. | N/A |
+
+## Scenario Coverage (@s -> evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` valid non-preset rectangle validates and previews | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s2` legacy JSON without `boardSize` keeps existing behavior | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s3` oversize dimensions rejected locally | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s4` more than 60 arrows rejected locally | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s5` arrow cells outside rectangle rejected locally | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s6` creator documents rectangular schema | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+| `@s7` backend rectangular validation errors surfaced | `specs/flexible-rectangular-boards-MAZ-216.feature` |
+
+## Result Obtained
+
+- Added `specs/flexible-rectangular-boards-MAZ-216.spec.md` with admin behavior,
+  affected-ticket review, Clean Architecture placement, edge cases, and decisions.
+- Added `specs/flexible-rectangular-boards-MAZ-216.feature` with `@s1..@s7`.
+- Proposed `boardSize` as the admin rectangular authoring input and backend normalization
+  to a full `CELL_MASK` `boardShape` for mobile compatibility.
+- `npm run verify` green: lint, typecheck, coverage (`54` files / `230` tests), and build.
+
+## Team Modifications Pending Human Review
+
+- Human approval is required for the `@s1..@s7` contract before any TDD implementation.
+- The team must confirm the `boardSize` request field name and the decision to normalize
+  rectangular boards to `boardShape` for persistence/read.
+
+## Lessons / Limitations
+
+- Existing admin preview and validation are mask/arrow-bound based; rectangular empty cells
+  require explicit dimensions in the contract.
+- Existing mobile already renders `boardShape`, so normalized full rectangles avoid mobile
+  work if the backend contract is approved as written.
+
+
+---
+
+# AI Usage Log: MAZ-222 free-form custom board mask painter (admin planning)
+
+## Task / Problem
+
+Prepare the admin-side executable contract for `MAZ-222` / M12-09: add a free-form custom
+board mask mode to the visual editor so admins can author irregular board shapes instead of
+being limited to the 4 preset figures (SQUARE, DIAMOND, CROSS, HEART). This is the follow-up to
+MAZ-216 (M12-04), whose Decision + Out-of-scope explicitly deferred the "full visual editor" and
+"irregular masked boardShape" authoring.
+
+This is a planning/human-gate change only. No production code was written, because no approved
+MAZ-222 `.feature` contract exists yet.
+
+## Root-cause note (why MAZ-216 did not satisfy the request)
+
+MAZ-216 was scoped to **rectangular** boards authored via the JSON creator; the visual editor's
+preset figure system was left untouched by design. The export/persistence contract already emits
+`boardShape: CELL_MASK` (DIAMOND/CROSS/HEART are already irregular masks) and the create-level
+backend already accepts it, so custom-shape authoring is admin presentation + admin domain
+validation work — no backend/mobile change expected.
+
+## Tool and Model
+
+Claude Code / claude-opus-4-8 (1M context).
+
+## Prompt Used
+
+The user asked to evaluate MAZ-216 (felt the solution was insufficient — wants to draw a custom
+board shape in the visual editor), and, after the evaluation, to create the follow-up ticket:
+draft the spec + Gherkin in a new worktree, leave a draft PR, and file the Linear ticket in
+Backlog for approval, following both repo `AGENTS.md` files, root `MEMORY.md`,
+`Linear_MCP_Guideline.md`, worktree-per-ticket, AI usage logging, and commit/push/PR/Linear.
+
+## Agent Roles Used
+
+| Agent | Status | How it was used | Evidence |
+| --- | --- | --- | --- |
+| Spec Partner (`.agents/spec-partner.md`) | Referenced | Read the current editor (`boardFigures`, `EditorLevelModel`, `validateEditorLevel`, `exportLevelDefinition`, `LevelEditorViewModel`, `LevelEditorScreen`) and MAZ-216/211 contracts; distilled the draft spec with decisions and open questions. No separate agent session was run. | `specs/free-form-custom-board-mask-MAZ-222.spec.md` |
+| Planner / Gherkin Author (`.agents/planner.md`) | Referenced | Wrote the executable Gherkin `@s1..@s8` for the human gate and filed the Backlog ticket. | `specs/free-form-custom-board-mask-MAZ-222.feature`, Linear `MAZ-222` |
+| TDD Implementer (`.agents/tdd-implementer.md`) | Not used | No TDD implementation started; the contract needs human approval first. | N/A |
+| Judge (`.agents/judge.md`) | Referenced | Applied the Clean Architecture checklist to the proposed layer impact and forbidden moves. | this log + spec `## Clean Architecture contract` |
+| Mutation Tester (`.agents/mutation.md`) | Not used | Not applicable to a contract-only planning change. | N/A |
+
+## Scenario Coverage (@s -> evidence)
+
+| Scenario | Evidence |
+| --- | --- |
+| `@s1` empty custom mask is invalid | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s2` toggling cells builds the board + previews custom shape | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s3` toggling a cell off flags an arrow that used it | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s4` disconnected custom mask rejected | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s5` valid mask exports CELL_MASK of exactly the painted cells | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s6` selecting a preset seeds the editable custom mask | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s7` valid custom level publishes through the existing flow | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+| `@s8` backend rejection surfaced | `specs/free-form-custom-board-mask-MAZ-222.feature` |
+
+## Result Obtained
+
+- Added `specs/free-form-custom-board-mask-MAZ-222.spec.md` (behavior, effective-mask model,
+  Clean Architecture contract, edge cases, decisions, open questions).
+- Added `specs/free-form-custom-board-mask-MAZ-222.feature` with `@s1..@s8`.
+- Filed Linear `MAZ-222` (M12-09) in Backlog with the embedded Clean Architecture contract.
+- No production code changed; no `src/` touched.
+
+## Team Modifications Pending Human Review
+
+- Human approval of the `@s1..@s8` contract is required before any TDD implementation.
+- Four open questions to confirm at the gate: (1) mask connectivity requirement, (2) fixed grid
+  vs. variable dimensions up to 12x12, (3) preset seed-and-edit vs. separate modes, (4) backend
+  acceptance of arbitrary CELL_MASK within the M12 envelope.
+
+## Lessons / Limitations
+
+- The persistence/export contract already supports irregular CELL_MASK; the only real gap was
+  the authoring UI offering fixed presets — so "any shape" is mostly a presentation + domain
+  validation slice, not a cross-repo change.
+- Keeping grid size fixed keeps this an independent tracer bullet; combining it with MAZ-216's
+  variable dimensions would couple two features and is deferred as an open question.
+
+
 <!-- AI_LOG_ENTRIES_END -->
