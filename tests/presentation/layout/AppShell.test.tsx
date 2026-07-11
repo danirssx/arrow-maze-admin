@@ -30,11 +30,12 @@ function renderShell(overrides?: {
 }
 
 describe("AppShell", () => {
-  it("shows the brand, username and the three sections", () => {
+  it("shows the brand, username and admin sections", () => {
     renderShell();
     expect(screen.getByTestId("brand")).toHaveTextContent("Arrow Maze Admin");
     expect(screen.getByTestId("admin-username")).toHaveTextContent("admin");
     expect(screen.getByTestId("nav-levels")).toHaveTextContent("Levels");
+    expect(screen.getByTestId("nav-daily-challenge")).toHaveTextContent("Daily Challenge");
     expect(screen.getByTestId("nav-leaderboard")).toHaveTextContent("Leaderboard");
     expect(screen.getByTestId("nav-users")).toHaveTextContent("Users");
     expect(screen.getByTestId("admin-content")).toHaveTextContent("routed content");
