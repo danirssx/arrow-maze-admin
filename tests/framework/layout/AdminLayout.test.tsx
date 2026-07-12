@@ -32,6 +32,7 @@ function renderLayout(signOut = vi.fn(async () => {})) {
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="/levels" replace />} />
             <Route path="levels" element={<SectionPlaceholderScreen title="Levels" />} />
+            <Route path="daily-challenge" element={<SectionPlaceholderScreen title="Daily Challenge" />} />
             <Route path="leaderboard" element={<SectionPlaceholderScreen title="Leaderboard" />} />
           </Route>
         </Routes>
@@ -52,6 +53,10 @@ describe("AdminLayout", () => {
 
   it("navigates between sections through the nav", async () => {
     renderLayout();
+    await userEvent.click(screen.getByTestId("nav-daily-challenge"));
+    expect(screen.getByTestId("section-title")).toHaveTextContent("Daily Challenge");
+    expect(screen.getByTestId("nav-daily-challenge")).toHaveAttribute("aria-current", "page");
+
     await userEvent.click(screen.getByTestId("nav-leaderboard"));
     expect(screen.getByTestId("section-title")).toHaveTextContent("Leaderboard");
     expect(screen.getByTestId("nav-leaderboard")).toHaveAttribute("aria-current", "page");
