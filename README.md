@@ -59,7 +59,7 @@ npm run mutation             # Stryker mutation (domain + application)
 
 | Var | Purpose | Default |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Arrow Maze backend base URL (inlined at build time by Vite) | `http://localhost:3000` |
+| `VITE_API_BASE_URL` | Arrow Maze backend base URL (inlined at build time by Vite) | Dev: `http://localhost:3000`; production fallback: `https://arrow-maze-backend-production-6dd8.up.railway.app` |
 
 ## Deployment (AD-11)
 
@@ -71,7 +71,8 @@ Host configuration is committed:
 - **S3 + CloudFront** — upload `dist/`, map unknown paths → `index.html`.
 
 Set the production API URL as a **build** env var on the host
-(`VITE_API_BASE_URL=https://…`), and add the admin's deployed origin to the backend
-`CORS_ORIGIN` (BE-04, comma-separated). Full runbook: [`docs/deploy.md`](docs/deploy.md).
+(`VITE_API_BASE_URL=https://arrow-maze-backend-production-6dd8.up.railway.app`), and add the
+admin's deployed origin to the backend `CORS_ORIGIN` (BE-04, comma-separated). Full runbook:
+[`docs/deploy.md`](docs/deploy.md).
 
 > Performing the actual deploy + DNS is a human step (agents don't deploy).
